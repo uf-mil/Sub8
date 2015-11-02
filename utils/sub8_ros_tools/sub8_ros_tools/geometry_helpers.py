@@ -1,5 +1,8 @@
 from __future__ import division
 import numpy as np
+from tf import transformations
+import math
+from geometry_msgs.msg import Quaternion
 
 
 def make_rotation(vector_a, vector_b):
@@ -70,3 +73,36 @@ def compose_transformation(R, t):
     transformation[3, :3] = t
     transformation[3, 3] = 1.0
     return transformation
+
+
+def quat_to_rotvec(q):
+    ''' Turn a quaternion into a axis rotation vector [x,y,z] '''
+    if q[3] < 0:
+        q = -q
+    q = transformations.unit_vector(q)
+    angle = math.acos(q[3])*2
+    axis = normalize(q[0:3])
+    return axis * angle
+
+def quat_to_np(q):
+    ''' Turn a quaternion into a numpy array '''
+    array = np.zeros((4))
+    array[0] = q.x
+    array[1] = q.y
+    array[2] = q.z
+    array[3] = q.w
+    return array
+
+def np_to_quat(array):
+    ''' Turn a numpy array into a ROS quaternion '''
+    quat = Quaternion()
+    quat.x = array[0]
+    quat.y = array[1]
+    quat.z = array[2]
+    quat.w = array[3]
+    return quat
+
+def rotvec_to_quat(rotvec):
+    ''' Turn a axis rotation vector into a ROS quaternion '''
+    return transformations.quaternion_about_axis(np.linalg.norm(rotvec), rotvec)
+
