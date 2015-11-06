@@ -1,5 +1,5 @@
 #goal definition
-nav_msgs/Odometry order
+sub8_msgs/Waypoint waypoint
 ---
 #result definition
 bool flag

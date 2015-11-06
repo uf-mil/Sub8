@@ -1,7 +1,6 @@
 from __future__ import division
 import numpy as np
 from tf import transformations
-import math
 from geometry_msgs.msg import Quaternion
 
 
@@ -65,7 +64,6 @@ def skew_symmetric_cross(a):
 def normalize(vector):
     return vector / np.linalg.norm(vector)
 
-
 def compose_transformation(R, t):
     '''Compose a transformation from a rotation matrix and a translation matrix'''
     transformation = np.zeros((4, 4))
@@ -74,35 +72,68 @@ def compose_transformation(R, t):
     transformation[3, 3] = 1.0
     return transformation
 
+def quat_to_euler(q):
+    ''' Approximate a quaternion as a euler rotation vector
+            [1]: http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/
+            [2]:http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToEuler/
+    '''
 
-def quat_to_rotvec(q):
-    ''' Turn a quaternion into a axis rotation vector [x,y,z] '''
-    if q[3] < 0:
-        q = -q
-    q = transformations.unit_vector(q)
-    angle = math.acos(q[3])*2
-    axis = normalize(q[0:3])
-    return axis * angle
+    quat = np.array(([q.x, q.y, q.z, q.w]))
+    quat = normalize(quat)
+    x,y,z,w = quat[0], quat[1], quat[2], quat[3]
 
-def quat_to_np(q):
-    ''' Turn a quaternion into a numpy array '''
-    array = np.zeros((4))
-    array[0] = q.x
-    array[1] = q.y
-    array[2] = q.z
-    array[3] = q.w
-    return array
+    ''' singularity avoidance
+        values close to 90 degrees would render math.atan2(0,0) as 0
+        in the x,y,z calculations leading to innacurate returns. 
+        this avoids those innacuracies
+        0.499 it around 87 degrees, adjust value accordingly 
+    '''
+    verify = x * y + z * w
 
-def np_to_quat(array):
-    ''' Turn a numpy array into a ROS quaternion '''
-    quat = Quaternion()
-    quat.x = array[0]
-    quat.y = array[1]
-    quat.z = array[2]
-    quat.w = array[3]
-    return quat
+    if (verify > .499): # if singularity at north pole
+        yaw = 2 * np.arctan2(x,w)
+        pitch = np.pi/2
+        roll = 0
+        final = np.array(([roll, pitch, yaw]))
+        return final
+   
+    if (verify < -.499): # if singularity at south pole
+        yaw = -2 * np.arctan2(x,w)
+        pitch = - np.pi/2
+        roll = 0
+        final = np.array(([roll, pitch, yaw]))
+        return final
+    
+    # proofs of formula can be found at the links above 
+    roll = np.arctan2(2*x*w - 2*y*z , 1 - 2*x*x - 2*z*z)
+    pitch = np.arctan2(2*y*w-2*x*z , 1 - 2*y*y - 2*z*z)
+    yaw = np.arcsin(2*(x * y + z * w))
 
-def rotvec_to_quat(rotvec):
-    ''' Turn a axis rotation vector into a ROS quaternion '''
-    return transformations.quaternion_about_axis(np.linalg.norm(rotvec), rotvec)
+    final = np.array(([roll, pitch, yaw]))
+    return final
+
+def euler_to_quat(rotvec):
+    ''' convert a euler rotation vector into a ROS quaternion 
+            [1]: http://www.euclideanspace.com/maths/geometry/rotations/conversions/eulerToQuaternion/
+    '''
+
+    # proof of formula can be found at the links above 
+    roll = rotvec[0]
+    pitch = rotvec[1]
+    yaw = rotvec[2]
+    c1 = np.cos(pitch/2)
+    c2 = np.cos(yaw/2)
+    c3 = np.cos(roll/2)
+    s1 = np.sin(pitch/2)
+    s2 = np.sin(yaw/2)
+    s3 = np.sin(roll/2)
+    w =c1*c2*c3 - s1*s2*s3;
+    x =c1*c2*s3 + s1*s2*c3;
+    y =s1*c2*c3 + c1*s2*s3;
+    z =c1*s2*c3 - s1*c2*s3;
+    # return formatted as a ROS quaternion
+    return Quaternion(x,y,z,w)
+
+
+
 

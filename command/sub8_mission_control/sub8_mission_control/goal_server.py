@@ -5,7 +5,7 @@ import actionlib
 import roslib; roslib.load_manifest('sub8_mission_control')
 import sub8_mission_control.msg
 
-""" This server is current;y a barebones server and is used only to test the 
+""" This server is currently a barebones server and is used only to test the 
     client node at the moment 
 """
 
