@@ -52,7 +52,8 @@
 # standard
 from __future__ import division
 # 3rd party
-import numpy as np, numpy.linalg as npl
+import numpy as np
+import numpy.linalg as npl
 import transformations as trns
 
 ################################################# MAIN
@@ -82,17 +83,17 @@ def rep(x):
     """
     x = np.array(x)
     shape = x.shape
-    if shape == (3,):
-        if npl.norm(x)>=0 and npl.norm(x)<=np.pi:
+    if shape == (3, ):
+        if (npl.norm(x) >= 0) and (npl.norm(x) <= np.pi):
             return 'axle'  # norm of a proper axle is always between 0 and pi (inclusive)
-    elif shape == (4,):
+    elif shape == (4, ):
         if np.isclose(npl.norm(x), 1):
             return 'quaternion'  # here, quaternion refers specifically to unit quaternions (versors)
-    elif shape == (3,3):
+    elif shape == (3, 3):
         if np.isclose(npl.det(x), 1) and np.allclose(x.dot(x.T), np.eye(3)):
             return 'rotmat'  # a proper orthonormal matrix must have a determinant of +1 and an inverse equal to its transpose
-    elif shape == (4,4):
-        if np.isclose(npl.det(x[:3,:3]), 1) and np.allclose(x[:3,:3].dot(x[:3,:3].T), np.eye(3)) and np.allclose(x[3,:], [0,0,0,1]):
+    elif shape == (4, 4):
+        if np.isclose(npl.det(x[:3, :3]), 1) and np.allclose(x[:3, :3].dot(x[:3, :3].T), np.eye(3)) and np.allclose(x[3, :], [0, 0, 0, 1]):
             return 'tfmat'  # both orthonormality and homogeneity (bottom row of [0,0,0,1]) are required
     return 'notSO3'
 
@@ -153,17 +154,17 @@ def apply(x, P, t=None):
         if xrep == 'axle':
             x = matrix_from_axle(x)
         elif xrep == 'quaternion':
-            x = trns.quaternion_matrix(x)[:3,:3]
+            x = trns.quaternion_matrix(x)[:3, :3]
         elif xrep == 'tfmat':
             if t == 'tfmat':
-                t = x[:3,3]
-            x = x[:3,:3]
+                t = x[:3, 3]
+            x = x[:3, :3]
         # Apply rotation matrix to each point:
         newP = x.dot(P)
         # Apply translation as desired:
         if t is not None:
             # Allow the user to have used a 1D array for a single point:
-            if shape == (3,):
+            if shape == (3, ):
                 newP = newP + t
             else:
                 newP = newP + np.array([t]).T
@@ -208,11 +209,11 @@ def plus(x1, x2):
     """
     xrep = rep(x1)
     if xrep == 'quaternion':
-        return trns.unit_vector(trns.quaternion_multiply(x2,x1))
+        return trns.unit_vector(trns.quaternion_multiply(x2, x1))
     elif xrep == 'rotmat':
         return x2.dot(x1)
     elif xrep == 'tfmat':
-        return affine(x2[:3,:3].dot(x1[:3,:3]), x1[:3,3]+x2[:3,3])
+        return affine(x2[:3, :3].dot(x1[:3, :3]), x1[:3, 3] + x2[:3, 3])
     elif xrep == 'axle':
         # Adding axles is only valid for small perturbations...
         # Perform operation on actual SO3 manifold instead:
@@ -257,7 +258,7 @@ def minus(x1, x2):
     elif xrep == 'rotmat':
         return x2.dot(x1.T)
     elif xrep == 'tfmat':
-        return affine(x2[:3,:3].dot(x1.T[:3,:3]), x2[:3,3]-x1[:3,3])
+        return affine(x2[:3, :3].dot(x1.T[:3, :3]), x2[:3, 3] - x1[:3, 3])
     elif xrep == 'axle':
         # Subtracting axles is only valid for small perturbations...
         # Perform operation on actual SO3 manifold instead:
@@ -303,7 +304,7 @@ def error(current,target):
     False
 
     """
-    return get_axle(minus(current,target))
+    return get_axle(minus(current, target))
 
 
 def slerp(x1, x2, fraction):
@@ -334,17 +335,17 @@ def slerp(x1, x2, fraction):
     xrep = rep(x1)
     if xrep == 'quaternion':
         r12 = get_axle(trns.quaternion_multiply(x2, trns.quaternion_inverse(x1)))
-        x12 = quaternion_from_axle(fraction*r12)
+        x12 = quaternion_from_axle(fraction * r12)
     elif xrep == 'rotmat':
         r12 = get_axle(x2.dot(x1.T))
-        x12 = matrix_from_axle(fraction*r12)
+        x12 = matrix_from_axle(fraction * r12)
     elif xrep == 'tfmat':
-        r12 = get_axle(x2[:3,:3].dot(x1.T[:3,:3]))
-        x12 = affine(matrix_from_axle(fraction*r12), fraction*(x2[:3,3]-x1[:3,3]))
+        r12 = get_axle(x2[:3, :3].dot(x1.T[:3, :3]))
+        x12 = affine(matrix_from_axle(fraction * r12), fraction * (x2[:3,3] - x1[:3,3]))
     elif xrep == 'axle':
         R1 = matrix_from_axle(x1)
         R2 = matrix_from_axle(x2)
-        x12 = fraction*get_axle(R2.dot(R1.T))
+        x12 = fraction * get_axle(R2.dot(R1.T))
     else:
         raise ValueError('One or both values to slerp between are not SO3.')
     return plus(x1, x12)
@@ -362,7 +363,7 @@ def get_axle(x):
     """
     # sorry Mario, but the function you are looking for is in another castle
     angle, axis = angle_axis(x)
-    return angle*axis
+    return angle * axis
 
 
 def angle_axis(x):
@@ -390,11 +391,11 @@ def angle_axis(x):
             x = affine(x)
         angle, axis, point = trns.rotation_from_matrix(x)
         # But to be consistent with axles, we only use positive angles:
-        if angle<0:
+        if angle < 0:
             angle, axis = -angle, -axis
         # And we map the identity rotation to an axis of [0,0,0]:
         elif np.isclose(angle, 0):
-            axis = np.array([0,0,0])
+            axis = np.array([0, 0, 0])
     # In the quaternion case, we carry out the following routine:
     elif xrep == 'quaternion':
         # Renormalize for accuracy:
@@ -405,18 +406,18 @@ def angle_axis(x):
         # Extract axis:
         imMax = max(map(abs, x[1:]))
         if not np.isclose(imMax, 0):
-            axis = trns.unit_vector(x[1:] / (imMax*npl.norm(x[1:])))
+            axis = trns.unit_vector(x[1:] / (imMax * npl.norm(x[1:])))
         else:
-            axis = np.array([0,0,0])
+            axis = np.array([0, 0, 0])
         # Extract angle:
-        angle = 2*np.arccos(x[0])
+        angle = 2 * np.arccos(x[0])
     # In the axle case, the routine is trivial:
     elif xrep == 'axle':
         angle = npl.norm(x)
         if not np.isclose(angle, 0):
-            axis = x/angle
+            axis = x / angle
         else:
-            axis = np.array([0,0,0])
+            axis = np.array([0, 0, 0])
     # If not SO3:
     else:
         raise ValueError('Quantity to extract angle and axis from must be on SO3')
@@ -435,11 +436,11 @@ def quaternion_from_axle(r):
     True
 
     """
-    angle = np.mod(npl.norm(r), 2*np.pi)
+    angle = np.mod(npl.norm(r), 2 * np.pi)
     if not np.isclose(angle, 0):
-        return trns.quaternion_about_axis(angle, r/angle)
+        return trns.quaternion_about_axis(angle, r / angle)
     else:
-        return np.array([1,0,0,0])  # unit real number is identity quaternion
+        return np.array([1, 0, 0, 0])  # unit real number is identity quaternion
 
 
 def matrix_from_axle(r):
@@ -454,10 +455,10 @@ def matrix_from_axle(r):
      [ 0.     0.     1.   ]]
 
     """
-    angle = np.mod(npl.norm(r), 2*np.pi)
+    angle = np.mod(npl.norm(r), 2 * np.pi)
     if not np.isclose(angle, 0):
-        axlemat = crossmat(r/angle)
-        return np.eye(3) + np.sin(angle)*axlemat + (1-np.cos(angle))*axlemat.dot(axlemat)
+        axlemat = crossmat(r / angle)
+        return np.eye(3) + (np.sin(angle) * axlemat) + ((1 - np.cos(angle)) * axlemat.dot(axlemat))
     else:
         return np.eye(3)
 
@@ -488,13 +489,13 @@ def affine(x, t=None):
     shape = x.shape
     dim = len(shape)
     if dim == 1:
-        return np.append(x,1)
+        return np.append(x, 1)
     elif dim == 2 and shape[0] == shape[1]:
-        cast = np.zeros((shape[0]+1, shape[1]+1))
-        cast[-1,-1] = 1
-        cast[:shape[0],:shape[1]] = x
+        cast = np.zeros((shape[0] + 1, shape[1] + 1))
+        cast[-1, -1] = 1
+        cast[:shape[0], :shape[1]] = x
         if t is not None:
-            cast[:-1,-1] = t
+            cast[:-1, -1] = t
         return cast
     else:
         raise ValueError('Array to make affine must be a row or a square.')
@@ -527,7 +528,7 @@ def crossvec(W, check=False):
     True
 
     """
-    v = np.array([W[2,1], W[0,2], W[1,0]])
+    v = np.array([W[2, 1], W[0, 2], W[1, 0]])
     if check == True and not np.allclose(W, crossmat(v)):
         raise ValueError('Cross-product matrix must be skew-symmetric.')
     return v
@@ -541,13 +542,13 @@ def random_axle():
     axle
 
     """
-    angle = np.pi*np.random.rand(1)
+    angle = np.pi * np.random.rand(1)
     axis = trns.unit_vector(np.random.rand(3))
     for i in range(3):
         coinflip = np.random.rand(1)
-        if coinflip>0.5:
+        if coinflip > 0.5:
             axis[i] = -axis[i]
-    return angle*axis
+    return angle * axis
 
 
 # Module unit test:
