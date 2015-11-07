@@ -135,3 +135,12 @@ def odom_sub(topic, callback):
         callback(odometry_to_numpy(msg))
 
     return rospy.Subscriber(topic, nav_msgs.Odometry, wrapped_callback, queue_size=1)
+
+def numpy_to_quat(array):
+    ''' Turn a numpy array into a ROS quaternion '''
+    quat = Quaternion()
+    quat.x = array[0]
+    quat.y = array[1]
+    quat.z = array[2]
+    quat.w = array[3]
+    return quat

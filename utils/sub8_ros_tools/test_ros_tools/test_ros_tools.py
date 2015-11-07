@@ -7,6 +7,7 @@ from sub8_ros_tools import make_image_msg, get_image_msg
 from sub8_ros_tools import rosmsg_to_numpy, make_wrench_stamped
 from sub8_ros_tools import thread_lock
 from sub8_ros_tools import skew_symmetric_cross, make_rotation, normalize
+from sub8_ros_tools import quat_to_euler, euler_to_quat
 
 
 class TestROSTools(unittest.TestCase):
@@ -132,6 +133,27 @@ class TestROSTools(unittest.TestCase):
 
                 # Test that the norm is 1
                 np.testing.assert_almost_equal(norm, 1.0, err_msg="The normalized vector did not have length 1")
+
+    def test_quat_to_euler(self):
+        ''' Test quaternion to euler angle '''
+
+        q = Quaternion(x=0.70711, y=0.0, z=0.0, w=0.70711)
+        numpy_array = quat_to_euler(q)
+        truth = np.array(([1.57079633, 0.0, 0.0]))
+        np.testing.assert_almost_equal(numpy_array, truth, err_msg="Quaternion to euler conversion incorrect")
+
+    def test_euler_to_quat(self):
+        ''' Test quaternion to euler angle '''
+
+        e = np.array(([1.57079633, 0.0, 0.0]))
+        testing = euler_to_quat(e)
+        # strip away ROS data to just test return values
+        # because unittest doesn't support ROS message operandsss
+        testing = np.array(([testing.x, testing.y, testing.z, testing.w]))
+        truth = np.array(([0.70710678, 0.0, 0.0, 0.70710678]))
+        np.testing.assert_almost_equal(testing, truth, err_msg="Incorrect euler to quaternion conversion")
+
+        
 
 
 if __name__ == '__main__':
