@@ -142,17 +142,17 @@ class goal_proxy(object):
         to_send = Waypoint()
 
         # Add move onto current position
-        to_send.pose.position.x = self.current_pos.pose.position.x + self.relative_goal.x
-        to_send.pose.position.y = self.current_pos.pose.position.y + self.relative_goal.y
-        to_send.pose.position.z = self.current_pos.pose.position.z + self.relative_goal.z
+        to_send.pose.position.x = self.current_pos.pose.position.x + x
+        to_send.pose.position.y = self.current_pos.pose.position.y + y
+        to_send.pose.position.z = self.current_pos.pose.position.z + z
 
         # This section adds the desired axis rotation to current position
         # convert from quaternion to numpy array
         cur_rotation = gh.quat_to_euler(gh.quat_to_np(self.current_pos.pose.orientation))
         new_rotation = cur_rotation
-        new_rotation[0] = cur_rotation[0] + self.relative_goal.tx
-        new_rotation[1] = cur_rotation[1] + self.relative_goal.ty
-        new_rotation[2] = cur_rotation[2] + self.relative_goal.tz
+        new_rotation[0] = cur_rotation[0] + tx
+        new_rotation[1] = cur_rotation[1] + ty
+        new_rotation[2] = cur_rotation[2] + tz
         # convert from rotvec back into ROS quaternion message
         quat = gh.euler_to_quat(new_rotation)
         # set quaternion to send as the new quaternion
