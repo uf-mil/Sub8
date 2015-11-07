@@ -2,17 +2,19 @@
 
 import rospy
 import actionlib
-import roslib; roslib.load_manifest('sub8_mission_control')
 import sub8_mission_control.msg
 
-""" This server is currently a barebones server and is used only to test the 
-    client node at the moment 
+""" This server is currently a barebones server and is used only to test the
+    client node at the moment
 """
+
 
 class goal_server(object):
 
     def __init__(self):
-        self.server = actionlib.SimpleActionServer('goal', sub8_mission_control.msg.current_goalAction, execute_cb=self.execute_cb, auto_start = False)
+        self.server = actionlib.SimpleActionServer('goal', sub8_mission_control.msg.current_goalAction,
+                                                   execute_cb=self.execute_cb, auto_start=False
+                                                   )
         self.feedback = sub8_mission_control.msg.current_goalFeedback()
         self.result = sub8_mission_control.msg.current_goalResult()
         self.server.start()
@@ -23,7 +25,7 @@ class goal_server(object):
         self.success = True
         # append the seeds for the current_goal sequence
         self.feedback.sequence = []
-      
+
         # check that preempt has not been requested by the client
         if self.server.is_preempt_requested():
             self.server.set_preempted()
@@ -34,8 +36,10 @@ class goal_server(object):
 
     def execute_cb(self, goal):
 
-        while self.success == False:
+        while not rospy.is_shutdown():
             self.send_feedback()
+            if self.success:
+                break
 
         self.result.flag = True
         self.server.set_succeeded(self.result)
