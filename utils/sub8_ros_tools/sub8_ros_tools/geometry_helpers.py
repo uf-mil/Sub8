@@ -1,6 +1,7 @@
 from __future__ import division
 import numpy as np
 from tf import transformations
+from tf.transformations import quaternion_from_euler, euler_from_quaternion
 from geometry_msgs.msg import Quaternion
 
 
@@ -73,66 +74,17 @@ def compose_transformation(R, t):
     return transformation
 
 def quat_to_euler(q):
-    ''' Approximate a quaternion as a euler rotation vector
-            [1]: http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/
-            [2]:http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToEuler/
-    '''
+    ''' Approximate a quaternion as a euler rotation vector'''
 
-    quat = np.array(([q.x, q.y, q.z, q.w]))
-    quat = normalize(quat)
-    x,y,z,w = quat[0], quat[1], quat[2], quat[3]
-
-    ''' singularity avoidance
-        values close to 90 degrees would render math.atan2(0,0) as 0
-        in the x,y,z calculations leading to innacurate returns. 
-        this avoids those innacuracies
-        0.499 it around 87 degrees, adjust value accordingly 
-    '''
-    verify = x * y + z * w
-
-    if (verify > .499): # if singularity at north pole
-        yaw = 2 * np.arctan2(x,w)
-        pitch = np.pi/2
-        roll = 0
-        final = np.array(([roll, pitch, yaw]))
-        return final
-   
-    if (verify < -.499): # if singularity at south pole
-        yaw = -2 * np.arctan2(x,w)
-        pitch = - np.pi/2
-        roll = 0
-        final = np.array(([roll, pitch, yaw]))
-        return final
-    
-    # proofs of formula can be found at the links above 
-    roll = np.arctan2(2*x*w - 2*y*z , 1 - 2*x*x - 2*z*z)
-    pitch = np.arctan2(2*y*w-2*x*z , 1 - 2*y*y - 2*z*z)
-    yaw = np.arcsin(2*(x * y + z * w))
-
-    final = np.array(([roll, pitch, yaw]))
+    euler_rot_vec = euler_from_quaternion([q.x,q.y,q.z,q.w])
+    final = np.array(([euler_rot_vec[0], euler_rot_vec[1], euler_rot_vec[2]]))
     return final
 
 def euler_to_quat(rotvec):
-    ''' convert a euler rotation vector into a ROS quaternion 
-            [1]: http://www.euclideanspace.com/maths/geometry/rotations/conversions/eulerToQuaternion/
-    '''
+    ''' convert a euler rotation vector into a ROS quaternion '''
 
-    # proof of formula can be found at the links above 
-    roll = rotvec[0]
-    pitch = rotvec[1]
-    yaw = rotvec[2]
-    c1 = np.cos(pitch/2)
-    c2 = np.cos(yaw/2)
-    c3 = np.cos(roll/2)
-    s1 = np.sin(pitch/2)
-    s2 = np.sin(yaw/2)
-    s3 = np.sin(roll/2)
-    w =c1*c2*c3 - s1*s2*s3;
-    x =c1*c2*s3 + s1*s2*c3;
-    y =s1*c2*c3 + c1*s2*s3;
-    z =c1*s2*c3 - s1*c2*s3;
-    # return formatted as a ROS quaternion
-    return Quaternion(x,y,z,w)
+    quat = quaternion_from_euler(rotvec[0],rotvec[1],rotvec[2])
+    return Quaternion(quat[0], quat[1], quat[2], quat[3])
 
 
 

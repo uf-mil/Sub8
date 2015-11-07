@@ -137,10 +137,6 @@ class TestROSTools(unittest.TestCase):
     def test_quat_to_euler(self):
         ''' Test quaternion to euler angle '''
 
-        q = Quaternion(x=0.5, y=0.5, z=0.5, w=.5)
-        numpy_array = quat_to_euler(q)
-        truth = np.array(([0, 1.57079633, 1.57079633]))
-        np.testing.assert_almost_equal(numpy_array, truth, err_msg="Quaternion singularity tolerance incorrect")
         q = Quaternion(x=0.70711, y=0.0, z=0.0, w=0.70711)
         numpy_array = quat_to_euler(q)
         truth = np.array(([1.57079633, 0.0, 0.0]))
@@ -148,14 +144,6 @@ class TestROSTools(unittest.TestCase):
 
     def test_euler_to_quat(self):
         ''' Test quaternion to euler angle '''
-
-        e = np.array(([0, 1.57079633, 1.57079633]))
-        testing = euler_to_quat(e)
-        # strip away ROS data to just test return values
-        # because unittest doesn't support ROS message operands duh
-        testing = np.array(([testing.x, testing.y, testing.z, testing.w]))
-        truth = np.array(([0.5, 0.5, 0.5, 0.5]))
-        np.testing.assert_almost_equal(testing, truth, err_msg="Euler angles cuased singularity")
 
         e = np.array(([1.57079633, 0.0, 0.0]))
         testing = euler_to_quat(e)
