@@ -63,3 +63,7 @@ target/
 *.mtl
 *.obj
 !transdec.obj
+
+.DS_STORE
+# Autosave files from QtCreator
+*.autosave

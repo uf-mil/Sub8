@@ -5,6 +5,7 @@ Original Author: Annie Luc
 from __future__ import division
 import numpy as np
 import ode
+import rospy
 
 
 class Constants(object):
@@ -24,7 +25,13 @@ class World(object):
         self.ode_world = ode.World()
         self.ode_world.setGravity(np.array([0, 0, Constants.g]))
 
-        self.ode_world.setAngularDamping(0.2)
+        try:
+            self.ode_world.setAngularDamping(0.2)
+        except AttributeError:
+            rospy.logerr("SIM ERROR: You need to re-run the install script, or manually fix pyode")
+            rospy.logerr("SIM ERROR: Killing simulation")
+            exit(0)
+
         # self.ode_world.setLinearDamping(0.2)
         self.ode_world.setERP(0.8)
         self.ode_world.setCFM(1E-5)
@@ -198,18 +205,6 @@ class Sphere(Entity):
         self.geom = ode.GeomSphere(space, radius)
         self.geom.setBody(self.body)
 
-    @property
-    def submerged_volume(self):
-        '''Assume water is at z = 0
-        Volume of sphere: (4 / 3)pi * r**3
-        Volume of a spherical cap of height h: (1 / 3)pi * h**2 * (3r - h)
-        '''
-        h = np.clip(self.pos[2], 0.0, 2 * self.radius)
-        sphere_volume = (4. / 3.) * (np.pi * (self.radius ** 3.))
-        above_water_volume = (1 / 3) * np.pi * (h ** 2) * ((3 * self.radius) - h)
-        submerged_volume = sphere_volume - above_water_volume
-        return submerged_volume
-
     def step(self, dt):
         self.apply_damping_force()
         self.apply_damping_torque()
@@ -227,6 +222,7 @@ class Mesh(Entity):
         meshdata = ode.TriMeshData()
         meshdata.build(mesh_vertices, mesh_faces)
         self.geom = ode.GeomTriMesh(meshdata, space)
+        self.body = ode.Body(world)
 
     def step(self, dt):
         # self.apply_damping_force()
