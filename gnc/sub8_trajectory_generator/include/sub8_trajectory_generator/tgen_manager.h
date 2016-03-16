@@ -91,6 +91,8 @@ class TGenManager {
   AlarmBroadcasterPtr _alarm_broadcaster; 
   
   AlarmRaiserPtr _planning_failure_alarm;
+
+  double _solve_time; 
 };
 }
 }
