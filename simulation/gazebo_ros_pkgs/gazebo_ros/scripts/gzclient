@@ -1,0 +1,21 @@
+#!/bin/sh
+final="$@"
+
+# remove ros remapping arguments like "__name:=node_name"; otherwise, they'd 
+# be interpreted as a world name by gzserver, and it'd crash while loading it
+final=`echo "$final" | sed 's/[^ ]*:=[^ ]* \?//g'`
+
+EXT=so
+if [ $(uname) = "Darwin" ]; then
+    EXT=dylib
+fi
+
+# add ros plugin if does not exist
+if [ `expr "$final" : ".*libgazebo_ros_paths_plugin\.$EXT.*"` -eq 0 ]
+then
+    final="$final -g `catkin_find --first-only libgazebo_ros_paths_plugin.$EXT`"
+fi
+
+# Combine the commands
+setup_path=$(pkg-config --variable=prefix gazebo)/share/gazebo/
+. $setup_path/setup.sh && gzclient $final
