@@ -15,9 +15,6 @@ from std_msgs.msg import Header
 from uf_common.msg import PoseTwist, PoseTwistStamped
 from sub8_ros_tools import pose_to_numpy, twist_to_numpy
 
-
-from kill_handling.listener import KillListener
-
 from rise_6dof import controller
 from rise_6dof.cfg import controllerConfig
 from rise_6dof.srv import SendConstantWrench
@@ -44,7 +41,6 @@ class Node(object):
             return self.config
 
     def __init__(self):
-        self.kill_listener = KillListener()
 
         self.reconfigure(controllerConfig.defaults, 0)
         self.server = DynamicReconfigureServer(controllerConfig, self.reconfigure)
@@ -71,10 +67,6 @@ class Node(object):
             rospy.sleep(dt)
 
             if rospy.Time.now() < rospy.Time(0.5):
-                self.kill()
-                continue
-
-            if self.kill_listener.get_killed():
                 self.kill()
                 continue
 
