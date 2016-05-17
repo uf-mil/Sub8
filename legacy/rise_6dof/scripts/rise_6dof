@@ -15,6 +15,9 @@ from std_msgs.msg import Header
 from uf_common.msg import PoseTwist, PoseTwistStamped
 from sub8_ros_tools import pose_to_numpy, twist_to_numpy
 
+from sub8_alarm import AlarmListener
+from sub8_msgs.msg import Alarm
+
 from rise_6dof import controller
 from rise_6dof.cfg import controllerConfig
 from rise_6dof.srv import SendConstantWrench
@@ -61,12 +64,19 @@ class Node(object):
         pub = rospy.Publisher('/output', WrenchStamped, queue_size=2)
         pd_pub = rospy.Publisher('/pd_output', WrenchStamped, queue_size=2)
 
+        self.kill_listener = rospy.Subscriber('/alarm_raise', Alarm, self.kill_cb)
+        self.killed = True
+
         dt = 1 / 50
 
         while not rospy.is_shutdown():
             rospy.sleep(dt)
 
             if rospy.Time.now() < rospy.Time(0.5):
+                self.kill()
+                continue
+
+            if self.killed is True:
                 self.kill()
                 continue
 
@@ -118,6 +128,12 @@ class Node(object):
                 ),
                 wrench=wrench,
             ))
+
+    def kill_cb(self, msg):
+        if msg.clear is False and msg.alarm_name == "kill":
+            self.killed = True
+        if msg.clear is True and msg.alarm_name == "kill":
+            self.killed = False
 
     def is_constant_wrench_valid(self):
         if self.constant_wrench is None:

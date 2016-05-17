@@ -4,11 +4,12 @@ from scipy.optimize import minimize
 import numpy as np
 from sub8_ros_tools import wait_for_param, thread_lock, rosmsg_to_numpy
 import threading
-from sub8_msgs.msg import Thrust, ThrusterCmd
+from sub8_msgs.msg import Thrust, ThrusterCmd, Alarm
 from sub8_msgs.srv import (ThrusterInfo, UpdateThrusterLayout, UpdateThrusterLayoutResponse,
                            BMatrix, BMatrixResponse)
 from geometry_msgs.msg import WrenchStamped
 lock = threading.Lock()
+from sub8_alarm import AlarmListener
 
 
 class ThrusterMapper(object):
@@ -48,12 +49,23 @@ class ThrusterMapper(object):
         self.B = self.generate_B(self.thruster_layout)
         self.min_thrusts, self.max_thrusts = self.get_ranges()
 
+        #self.kill_listener = AlarmListener('kill', self.kill_cb)
+        # Not the proper way to do this at all, but the kill listener class is being wonky right now
+        self.kill_listener = rospy.Subscriber('/alarm_raise', Alarm, self.kill_cb)
+        self.killed = True
+
         self.update_layout_server = rospy.Service('update_thruster_layout', UpdateThrusterLayout, self.update_layout)
         # Expose B matrix through a srv
         self.b_matrix_server = rospy.Service('b_matrix', BMatrix, self.get_b_matrix)
 
         self.wrench_sub = rospy.Subscriber('wrench', WrenchStamped, self.request_wrench_cb, queue_size=1)
         self.thruster_pub = rospy.Publisher('thrusters/thrust', Thrust, queue_size=1)
+
+    def kill_cb(self, msg):
+        if msg.clear is False and msg.alarm_name == "kill":
+            self.killed = True
+        if msg.clear is True and msg.alarm_name == "kill":
+            self.killed = False
 
     @thread_lock(lock)
     def update_layout(self, srv):
@@ -75,6 +87,7 @@ class ThrusterMapper(object):
             --> Add range service proxy using thruster names
                 --> This is not necessary, since they are all the same thruster
         '''
+        '''
         range_service = 'thrusters/thruster_range'
         rospy.logwarn("Waiting for service {}".format(range_service))
         rospy.wait_for_service(range_service)
@@ -85,7 +98,10 @@ class ThrusterMapper(object):
 
         minima = np.array([thruster_range.min_force] * self.num_thrusters)
         maxima = np.array([thruster_range.max_force] * self.num_thrusters)
-        return minima, maxima
+        '''
+        return np.array(([-85.16798401, -85.16798401, -85.16798401, -85.16798401, -85.16798401,
+ -85.16798401, -85.16798401, -85.16798401])), np.array(([85.16798401, 85.16798401, 85.16798401, 85.16798401, 85.16798401
+, 85.1679840, 85.16798401, 85.16798401]))
 
     def get_thruster_wrench(self, position, direction):
         '''Compute a single column of B, or the wrench created by a particular thruster'''
@@ -201,8 +217,9 @@ class ThrusterMapper(object):
                     thrust = 0
                 thrust_cmds.append(ThrusterCmd(name=name, thrust=thrust))
 
-        self.thruster_pub.publish(thrust_cmds)
-
+        # If the sub is not killed
+        if self.killed is False:
+            self.thruster_pub.publish(thrust_cmds)
 
 if __name__ == '__main__':
     mapper = ThrusterMapper()
