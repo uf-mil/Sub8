@@ -87,7 +87,7 @@ class ThrusterMapper(object):
             --> Add range service proxy using thruster names
                 --> This is not necessary, since they are all the same thruster
         '''
-        '''
+
         range_service = 'thrusters/thruster_range'
         rospy.logwarn("Waiting for service {}".format(range_service))
         rospy.wait_for_service(range_service)
@@ -98,10 +98,7 @@ class ThrusterMapper(object):
 
         minima = np.array([thruster_range.min_force] * self.num_thrusters)
         maxima = np.array([thruster_range.max_force] * self.num_thrusters)
-        '''
-        return np.array(([-85.16798401, -85.16798401, -85.16798401, -85.16798401, -85.16798401,
- -85.16798401, -85.16798401, -85.16798401])), np.array(([85.16798401, 85.16798401, 85.16798401, 85.16798401, 85.16798401
-, 85.1679840, 85.16798401, 85.16798401]))
+        return minima, maxima
 
     def get_thruster_wrench(self, position, direction):
         '''Compute a single column of B, or the wrench created by a particular thruster'''
