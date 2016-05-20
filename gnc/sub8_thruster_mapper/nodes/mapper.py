@@ -49,9 +49,8 @@ class ThrusterMapper(object):
         self.B = self.generate_B(self.thruster_layout)
         self.min_thrusts, self.max_thrusts = self.get_ranges()
 
-        #self.kill_listener = AlarmListener('kill', self.kill_cb)
+        self.kill_listener = AlarmListener('kill', self.kill_cb)
         # Not the proper way to do this at all, but the kill listener class is being wonky right now
-        self.kill_listener = rospy.Subscriber('/alarm_raise', Alarm, self.kill_cb)
         self.killed = True
 
         self.update_layout_server = rospy.Service('update_thruster_layout', UpdateThrusterLayout, self.update_layout)
@@ -86,6 +85,11 @@ class ThrusterMapper(object):
         '''Get upper and lower thrust limits for each thruster
             --> Add range service proxy using thruster names
                 --> This is not necessary, since they are all the same thruster
+
+            --> If ever needed for testing purposes:
+                minima: [-85.16798401, -85.16798401, -85.16798401, -85.16798401, -85.16798401, -85.16798401, -85.16798401, -85.16798401]
+                maxima: [ 93.17094421,  93.17094421,  93.17094421,  93.17094421,  93.17094421, 93.17094421 , 93.17094421 , 93.17094421]
+
         '''
 
         range_service = 'thrusters/thruster_range'
@@ -98,6 +102,7 @@ class ThrusterMapper(object):
 
         minima = np.array([thruster_range.min_force] * self.num_thrusters)
         maxima = np.array([thruster_range.max_force] * self.num_thrusters)
+
         return minima, maxima
 
     def get_thruster_wrench(self, position, direction):
