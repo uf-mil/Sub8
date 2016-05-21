@@ -7,7 +7,7 @@ namespace subjugator {
 typedef Eigen::Matrix<double, 6, 1> Vector6d;
 
 class C3Trajectory {
-public:
+ public:
   struct Limits {
     Vector6d vmin_b;
     Vector6d vmax_b;
@@ -25,8 +25,7 @@ public:
 
     Point(const Vector6d &q, const Vector6d &qdot) : q(q), qdot(qdot) {}
 
-    bool is_approximately(const Point &other, double linear_tolerance,
-                          double angular_tolerance) {
+    bool is_approximately(const Point &other, double linear_tolerance, double angular_tolerance) {
       Vector6d q_difference = q - other.q;
       return q_difference.segment<3>(0).norm() < linear_tolerance &&
              q_difference.segment<3>(3).norm() < angular_tolerance;
@@ -35,8 +34,7 @@ public:
 
   struct PointWithAcceleration : public Point {
     Vector6d qdotdot;
-    PointWithAcceleration(const Vector6d &q, const Vector6d &qdot,
-                          const Vector6d &qdotdot)
+    PointWithAcceleration(const Vector6d &q, const Vector6d &qdot, const Vector6d &qdotdot)
         : Point(q, qdot), qdotdot(qdotdot) {}
   };
 
@@ -55,7 +53,7 @@ public:
 
   PointWithAcceleration getCurrentPoint() const;
 
-private:
+ private:
   Vector6d q;
   Vector6d qdot;
   Vector6d qdotdot_b;
@@ -63,15 +61,14 @@ private:
 
   Limits limits;
 
-  static double c3filter(double q, double qdot, double qdotdot, double r,
-                         double rdot, double rdotdot, double vmin, double vmax,
-                         double amin, double amax, double umax);
+  static double c3filter(double q, double qdot, double qdotdot, double r, double rdot,
+                         double rdotdot, double vmin, double vmax, double amin, double amax,
+                         double umax);
 
-  static std::pair<Eigen::Matrix4d, Eigen::Matrix4d>
-  transformation_pair(const Vector6d &q);
-  static std::pair<Eigen::Vector3d, Eigen::Vector3d>
-  limit(const Eigen::Vector3d &vmin, const Eigen::Vector3d &vmax,
-        const Eigen::Vector3d &delta);
+  static std::pair<Eigen::Matrix4d, Eigen::Matrix4d> transformation_pair(const Vector6d &q);
+  static std::pair<Eigen::Vector3d, Eigen::Vector3d> limit(const Eigen::Vector3d &vmin,
+                                                           const Eigen::Vector3d &vmax,
+                                                           const Eigen::Vector3d &delta);
 };
 };
 

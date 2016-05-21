@@ -16,7 +16,6 @@ from uf_common.msg import PoseTwist, PoseTwistStamped
 from sub8_ros_tools import pose_to_numpy, twist_to_numpy
 
 from sub8_alarm import AlarmListener
-from sub8_msgs.msg import Alarm
 
 from rise_6dof import controller
 from rise_6dof.cfg import controllerConfig
@@ -130,9 +129,9 @@ class Node(object):
             ))
 
     def kill_cb(self, msg):
-        if msg.clear is False and msg.alarm_name == "kill":
+        if msg.clear is False:
             self.killed = True
-        if msg.clear is True and msg.alarm_name == "kill":
+        if msg.clear is True:
             self.killed = False
 
     def is_constant_wrench_valid(self):

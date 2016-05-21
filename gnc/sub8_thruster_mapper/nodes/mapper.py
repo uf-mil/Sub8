@@ -61,9 +61,9 @@ class ThrusterMapper(object):
         self.thruster_pub = rospy.Publisher('thrusters/thrust', Thrust, queue_size=1)
 
     def kill_cb(self, msg):
-        if msg.clear is False and msg.alarm_name == "kill":
+        if msg.clear is False:
             self.killed = True
-        if msg.clear is True and msg.alarm_name == "kill":
+        if msg.clear is True:
             self.killed = False
 
     @thread_lock(lock)
