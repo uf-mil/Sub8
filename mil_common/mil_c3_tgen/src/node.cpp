@@ -7,16 +7,17 @@
 #include <sub8_msgs/PoseTwistStamped.h>
 #include <sub8_msgs/MoveToAction.h>
 
-#include "c3_trajectory_generator/SetDisabled.h"
+#include <mil_c3_trajectory_generator/SetDisabled.h>
 #include "C3Trajectory.h"
-#include <msg_helpers.h>
-#include <param_helpers.h>
+#include <uf_common/msg_helpers.h>
+#include <uf_common/param_helpers.h>
 
 using namespace std;
 using namespace geometry_msgs;
 using namespace nav_msgs;
 using namespace sub8_msgs;
-using namespace c3_trajectory_generator;
+using namespace uf_common;
+using namespace mil_c3_trajectory_generator;
 
 subjugator::C3Trajectory::Point Point_from_PoseTwist(const Pose &pose,
                                                      const Twist &twist) {

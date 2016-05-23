@@ -1,6 +1,6 @@
-# goal
+# goal. copies PoseTwistStamped.
 Header header
-sub8_msgs/PoseTwist posetwist
+uf_common/PoseTwist posetwist
 float64 speed
 bool uncoordinated # false goes in a straight line, true achieves some components before others
 float64 linear_tolerance # distance from goal for result to be sent
@@ -9,4 +9,3 @@ float64 angular_tolerance
 # result
 ---
 # feedback
-

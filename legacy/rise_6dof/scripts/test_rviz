@@ -14,7 +14,7 @@ from nav_msgs.msg import Odometry
 from std_msgs.msg import Header, ColorRGBA
 from tf import transformations
 
-from uf_common.msg import PoseTwist, PoseTwistStamped
+from sub8_msgs.msg import PoseTwist, PoseTwistStamped
 from uf_common.orientation_helpers import xyz_array, xyzw_array
 
 
@@ -34,10 +34,10 @@ def make6DofMarker(name, description, allow_rotation=False):
     int_marker.description = description
     int_marker.header.frame_id = '/map'
     int_marker.scale = 1
-    
+
     # insert a box
     int_marker.controls.append(makeBoxControl())
-    
+
     for direction in 'xyz':
         control = InteractiveMarkerControl()
         control.orientation.w = 1
@@ -47,7 +47,7 @@ def make6DofMarker(name, description, allow_rotation=False):
         control.name = 'move_' + direction
         control.interaction_mode = InteractiveMarkerControl.MOVE_AXIS
         int_marker.controls.append(control)
-        
+
         if allow_rotation:
             control = InteractiveMarkerControl()
             control.orientation.w = 1
@@ -57,7 +57,7 @@ def make6DofMarker(name, description, allow_rotation=False):
             control.name = 'rotate_' + direction
             control.interaction_mode = InteractiveMarkerControl.ROTATE_AXIS
             int_marker.controls.append(control)
-    
+
     return int_marker
 
 def makeMovingMarker(name, description):
@@ -66,17 +66,17 @@ def makeMovingMarker(name, description):
     int_marker.description = description
     int_marker.header.frame_id = '/map'
     int_marker.scale = 1
-    
+
     # insert a box
     int_marker.controls.append(makeBoxControl())
-    
+
     return int_marker
 
 if __name__ == '__main__':
     rospy.init_node('test_rviz')
     server = InteractiveMarkerServer('test_rviz')
-    
-    
+
+
     wrench = [(0, 0, 0), (0, 0, 0)]
     def set_wrench(new_wrench):
         assert new_wrench.header.frame_id == '/base_link'
@@ -86,8 +86,8 @@ if __name__ == '__main__':
             (new_wrench.torque.x, new_wrench.torque.y, new_wrench.torque.z),
         ]
     wrench_sub = rospy.Subscriber('/output', WrenchStamped, set_wrench)
-    
-    
+
+
     desired_pub = rospy.Publisher('/desired', PoseTwistStamped)
     desired_posetwist = PoseTwistStamped(
         header=Header(frame_id='/map', stamp=rospy.Time.now()),
@@ -128,11 +128,11 @@ if __name__ == '__main__':
             desired_pub.publish(desired_posetwist)
     server.insert(make6DofMarker('desired', '\nDesired', True), updateDesired)
     rospy.Timer(rospy.Duration(.01), lambda msg: updateDesired(None))
-    
-    
+
+
     current_pub = rospy.Publisher('/current', Odometry)
     server.insert(makeMovingMarker('current', 'Current\n'))
-    
+
     current_pos = numpy.zeros(3)
     current_vel = numpy.zeros(3)
     current_orientation = numpy.array([0, 0, 0, 1])
@@ -142,34 +142,34 @@ if __name__ == '__main__':
     dt = .01
     def updateCurrent(msg):
         global current_pos, current_vel, current_orientation, current_angvel
-        
+
         world_from_body = transformations.quaternion_matrix(current_orientation)[:3, :3]
-        
+
         #print wrench
         wrench_world = world_from_body.dot(wrench[0]), world_from_body.dot(wrench[1])
-        
+
         current_vel += dt * (wrench_world[0] - 10 * current_vel)/m
         current_angvel += dt * (wrench_world[1] - 5 * current_angvel)/I
-        
+
         current_pos += dt * current_vel
         quat_exp = lambda (x, y, z): transformations.quaternion_about_axis(numpy.linalg.norm((x, y, z)), (x, y, z))
         current_orientation = transformations.quaternion_multiply(quat_exp(current_angvel * dt), current_orientation)
-        
+
         pose = Pose(
             Point(x=current_pos[0], y=current_pos[1], z=current_pos[2]),
             Quaternion(x=current_orientation[0], y=current_orientation[1], z=current_orientation[2], w=current_orientation[3]),
         )
-        
+
         server.setPose('current', pose)
         server.applyChanges()
-        
+
         current_pub.publish(Odometry(
             header=Header(frame_id='/map'),
             pose=PoseWithCovariance(pose=pose),
             twist=TwistWithCovariance(twist=Twist(linear=Vector3(*current_vel), angular=Vector3(*current_angvel))),
         ))
     rospy.Timer(rospy.Duration(dt), updateCurrent)
-    
-    
+
+
     server.applyChanges()
     rospy.spin()

@@ -12,7 +12,7 @@ from geometry_msgs.msg import Vector3, Wrench, WrenchStamped
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Header
 
-from uf_common.msg import PoseTwist, PoseTwistStamped
+from sub8_msgs.msg import PoseTwist, PoseTwistStamped
 from sub8_ros_tools import pose_to_numpy, twist_to_numpy
 
 from sub8_alarm import AlarmListener

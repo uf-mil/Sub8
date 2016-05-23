@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(mil_c3_trajectory_generator)
 
-find_package(catkin REQUIRED COMPONENTS nav_msgs actionlib message_runtime message_generation tf sub8_msgs sub8_ros_tools cmake_modules)
+find_package(catkin REQUIRED COMPONENTS nav_msgs actionlib message_runtime message_generation tf sub8_msgs sub8_ros_tools uf_common cmake_modules)
 
 add_service_files(
   FILES
@@ -14,6 +14,7 @@ find_package(Eigen REQUIRED)
 include_directories(
 	include
 	${Eigen_INCLUDE_DIRS}
+	${catkin_INCLUDE_DIRS}
 )
 
 generate_messages(
@@ -22,7 +23,7 @@ generate_messages(
 
 catkin_package(
     DEPENDS
-    CATKIN_DEPENDS nav_msgs actionlib message_runtime message_generation tf sub8_msgs sub8_ros_tools
+    CATKIN_DEPENDS nav_msgs actionlib message_runtime message_generation tf sub8_msgs sub8_ros_tools uf_common
     INCLUDE_DIRS include
     LIBRARIES
 )
