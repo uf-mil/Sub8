@@ -16,7 +16,7 @@ from tf import transformations
 from sub8_msgs.msg import PoseTwist, PoseTwistStamped
 from uf_common.orientation_helpers import xyz_array, xyzw_array, PoseEditor
 roslib.load_manifest('c3_trajectory_generator')
-from c3_trajectory_generator.srv import SetDisabled
+from mil_c3_trajectory_generator.srv import SetDisabled
 
 
 rospy.init_node('joy_to_posetwist')
