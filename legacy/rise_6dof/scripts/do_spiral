@@ -15,7 +15,7 @@ from geometry_msgs.msg import Pose, Twist, Vector3, Quaternion, Point
 from tf import transformations
 
 from uf_common import orientation_helpers
-from uf_common.msg import PoseTwist, PoseTwistStamped
+from sub8_msgs.msg import PoseTwist, PoseTwistStamped
 
 
 rospy.init_node('do_spiral')
@@ -51,11 +51,11 @@ def positionorientationvelocity_generator(t):
 
 def positionorientationvelocityangularvelocity_generator(t):
     pos, orient, vel = positionorientationvelocity_generator(t)
-    
+
     orient1 = positionorientationvelocity_generator(t-dt/2)[1]
     orient2 = positionorientationvelocity_generator(t+dt/2)[1]
     angvel = orientation_helpers.quat_to_rotvec(transformations.quaternion_multiply(orient2, transformations.quaternion_inverse(orient1)))/dt
-    
+
     return pos, orient, vel, angvel
 
 
@@ -64,16 +64,16 @@ pub = rospy.Publisher('/trajectory', PoseTwistStamped)
 start_time = rospy.Time.now()
 while not rospy.is_shutdown():
     rospy.sleep(.01)
-    
+
     now_time = rospy.Time.now()
-    
+
     t = (now_time - start_time).to_sec()
     pos, orient, vel, angvel = positionorientationvelocityangularvelocity_generator(t)
     if pos[2] < -5:
         break
-    
+
     world_from_body = transformations.quaternion_matrix(orient)[:3, :3]
-    
+
     pub.publish(PoseTwistStamped(
         header=Header(
             stamp=now_time,

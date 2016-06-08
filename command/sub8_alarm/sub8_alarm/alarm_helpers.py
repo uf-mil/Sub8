@@ -162,6 +162,7 @@ class AlarmListener(object):
             self.callback_linker[alarm_name] = {
                 'callback': callback_funct,
                 'args': args,
+                'last_time': None,
                 'active': False,
             }
 

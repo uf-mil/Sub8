@@ -82,9 +82,9 @@ class AlarmHandler(object):
             parameters = json.loads(alarm.parameters)
         if scenario is not None:
             if alarm.clear:
-                scenario.cancel(time, parameters)
+                scenario.cancel(time, parameters, alarm.alarm_name)
             else:
-                scenario.handle(time, parameters)
+                scenario.handle(time, parameters, alarm.alarm_name)
 
 
         # Handle meta-alarms (See wiki)

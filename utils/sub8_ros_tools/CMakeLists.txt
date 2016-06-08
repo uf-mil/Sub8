@@ -9,3 +9,4 @@ if(CATKIN_ENABLE_TESTING)
     catkin_add_nosetests(test_ros_tools)
 endif()
 
+include_directories(sub8_cpp_includes)

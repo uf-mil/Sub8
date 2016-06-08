@@ -12,11 +12,10 @@ from geometry_msgs.msg import Vector3, Wrench, WrenchStamped
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Header
 
-from uf_common.msg import PoseTwist, PoseTwistStamped
+from sub8_msgs.msg import PoseTwist, PoseTwistStamped
 from sub8_ros_tools import pose_to_numpy, twist_to_numpy
 
-
-from kill_handling.listener import KillListener
+from sub8_alarm import AlarmListener
 
 from rise_6dof import controller
 from rise_6dof.cfg import controllerConfig
@@ -44,7 +43,6 @@ class Node(object):
             return self.config
 
     def __init__(self):
-        self.kill_listener = KillListener()
 
         self.reconfigure(controllerConfig.defaults, 0)
         self.server = DynamicReconfigureServer(controllerConfig, self.reconfigure)
@@ -65,6 +63,9 @@ class Node(object):
         pub = rospy.Publisher('/output', WrenchStamped, queue_size=2)
         pd_pub = rospy.Publisher('/pd_output', WrenchStamped, queue_size=2)
 
+        self.kill_listener = AlarmListener('kill', self.kill_cb)
+        self.killed = True
+
         dt = 1 / 50
 
         while not rospy.is_shutdown():
@@ -74,7 +75,7 @@ class Node(object):
                 self.kill()
                 continue
 
-            if self.kill_listener.get_killed():
+            if self.killed is True:
                 self.kill()
                 continue
 
@@ -126,6 +127,12 @@ class Node(object):
                 ),
                 wrench=wrench,
             ))
+
+    def kill_cb(self, msg):
+        if msg.clear is False:
+            self.killed = True
+        if msg.clear is True:
+            self.killed = False
 
     def is_constant_wrench_valid(self):
         if self.constant_wrench is None:

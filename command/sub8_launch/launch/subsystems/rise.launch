@@ -7,7 +7,7 @@
     <rosparam file="$(find sub8_launch)/config/rise_6dof.yaml"/>
   </node>
 
-  <node pkg="c3_trajectory_generator" type="c3_trajectory_generator" name="c3_trajectory_generator" output="screen">
+  <node pkg="mil_c3_trajectory_generator" type="mil_c3_trajectory_generator" name="c3_trajectory_generator" output="screen">
     <rosparam>
         <!-- Degraded trajectory -->
         fixed_frame: /map

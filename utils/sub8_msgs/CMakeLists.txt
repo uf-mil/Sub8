@@ -1,13 +1,18 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(sub8_msgs)
 
-find_package(catkin REQUIRED COMPONENTS
+find_package(catkin REQUIRED
+  genmsg
+  actionlib_msgs
+  actionlib
+  catkin REQUIRED COMPONENTS
   geometry_msgs
   message_generation
   message_runtime
   rospy
   std_msgs
   sensor_msgs
+
 )
 
 add_message_files(
@@ -23,6 +28,9 @@ add_message_files(
   VelocityMeasurements.msg
   Path.msg
   PathPoint.msg
+  Acceleration.msg
+  PoseTwist.msg
+  PoseTwistStamped.msg
 )
 
 add_service_files(
@@ -43,16 +51,18 @@ add_service_files(
   TBDetectionSwitch.srv
 )
 
-# add_action_files(
-#   FILES
-#   Action1.action
-# )
+add_action_files(
+  DIRECTORY action
+  FILES
+  MoveTo.action
+)
 
 generate_messages(
   DEPENDENCIES
   geometry_msgs
   std_msgs
   sensor_msgs
+  actionlib_msgs
 )
 
 catkin_package(
