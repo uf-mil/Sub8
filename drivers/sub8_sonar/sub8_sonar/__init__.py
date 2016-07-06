@@ -1,1 +1,1 @@
-from sonar_driver import EchoLocator
+from sonar_driver import Multilaterator
