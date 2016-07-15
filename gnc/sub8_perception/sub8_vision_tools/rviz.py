@@ -35,13 +35,13 @@ class RvizVisualizer(object):
         )
         self.rviz_pub.publish(marker)
 
-    def draw_ray_3d(self, pix_coords, camera_model, color, frame='/stereo_front', _id=100):
+    def draw_ray_3d(self, pix_coords, camera_model, color, frame='/stereo_front', _id=100, length=35):
         '''Handle range data grabbed from dvl'''
         # future: should be /base_link/dvl, no?
         marker = self.make_ray(
             base=np.array([0.0, 0.0, 0.0]),
             direction=np.array(camera_model.projectPixelTo3dRay(pix_coords)),
-            length=35.0,
+            length=length,
             color=color,
             frame=frame,
             _id=_id
