@@ -38,7 +38,7 @@ class JobManager(object):
         self.verbose = verbose
         self.timedout = False
         self.job_queue = deque()
-        self.record_bags = log
+        self.record_bags = bag
         if bag:
             self.bagger = BagManager(self.nh, DIAG_OUT_DIR)
         self.successes = 0
