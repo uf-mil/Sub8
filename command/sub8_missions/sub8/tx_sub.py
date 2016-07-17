@@ -8,6 +8,7 @@ from uf_common.msg import MoveToAction, PoseTwistStamped, Float64Stamped
 from sub8 import pose_editor
 from sub8_msgs.srv import VisionRequest, VisionRequestRequest, VisionRequest2DRequest, VisionRequest2D
 from nav_msgs.msg import Odometry
+import rospy
 import genpy
 
 
@@ -162,6 +163,10 @@ class _PoseProxy(object):
         return sub_attr_proxy
 
     def go(self, *args, **kwargs):
+        # Set speed limit, default to 100 m/s
+        speed_limit = rospy.get_param("mission_speed_limit", 100)
+        kwargs['speed'] = np.clip(kwargs['speed'], 0, speed_limit) if 'speed' in kwargs else speed_limit
+
         if self.print_only:
             print 'P: {}, Angles: {}'.format(self._pose.position, transformations.euler_from_quaternion(self._pose.orientation))
             return self._sub._node_handle.sleep(0.1)
