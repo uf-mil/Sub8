@@ -23,7 +23,7 @@ class BuoyFinder:
         self.transformer = tf.TransformListener()
         rospy.sleep(2.0)
 
-        self.search = True
+        self.search = False
         self.last_image = None
         self.last_draw_image = None
         self.last_image_time = None
@@ -49,8 +49,9 @@ class BuoyFinder:
         }
         self.buoys = {
             # Boost classifier paths
-            'yellow': "/home/uf-mil/bags/ML/classifiers/yellow/gentle_5tree_15depth.dic"
-            'red': None
+            'yellow': "/home/matt/mil/ML/classifiers/yellow/gentle_5tree_15depth.dic",
+            'red': "/home/matt/mil/ML/classifiers/red/pool_only/red_gentle_9tree_9depth.dic",
+            'green': "/home/matt/mil/ML/classifiers/green/temp/gentle_7tree_11depth.dic"
 
             # Threshold paths
             #'green': '/color/buoy/green',
@@ -80,9 +81,9 @@ class BuoyFinder:
                 rospy.logwarn('Classifier path for {} not found!'.format(color))
                 continue
 
-            self.buoys[color] = cv2.Boost()
+            boost = cv2.Boost()
             rospy.loginfo("Loading {} boost".format(color))
-            self.buoys[color].load(boost_path)
+            self.buoys[color] = boost.load(self.buoys[color])
             rospy.loginfo("Classifier for {} buoy loaded".format(color))
 
         self.image_sub = sub8_ros_tools.Image_Subscriber('/stereo/left/image_raw', self.image_cb)
@@ -245,6 +246,7 @@ class BuoyFinder:
 
         ret = self.get_biggest(contours)
         if ret is None:
+            print "BUOY - {} - "
             return
 
         contour, tuple_center, area = ret
@@ -294,6 +296,9 @@ class BuoyFinder:
 
         # This is only run if buoy_type is not None
         for buoy_name in self.buoys.keys():
+            if self.buoys[buoy_name] is None:
+                continue
+
             #rospy.loginfo("BUOY - Looking for {}".format(buoy_name))
             result = self.find_single_buoy(img, timestamp, buoy_name)
             if not result:
