@@ -20,7 +20,7 @@ class MarkerFinder():
     def __init__(self):
         self.tf_listener = tf.TransformListener()
 
-        self.search = True
+        self.search = False
         self.last_image = None
         self.last_image_timestamp = None
         self.last_draw_image = None
@@ -111,10 +111,12 @@ class MarkerFinder():
         #img[:, -100:] = 0
         #img = cv2.GaussianBlur(img, (7, 7), 15)
         last_image_timestamp = self.last_image_timestamp
-        hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-        lower = np.array([self.calculate_threshold(hsv), 0, 0])
-        upper = np.array([179, 255, 255])
+        #lower = np.array([self.calculate_threshold(hsv), 0, 0])
+        #upper = np.array([179, 255, 255])
+        lower = np.array([0, 0, 200])
+        upper = np.array([200, 255, 255])
 
         # Take the threholded mask, remove noise, find the biggest contour, then draw a the best fit rectangle
         #   around that box, finally use same algorithm on the best fit rectangle.

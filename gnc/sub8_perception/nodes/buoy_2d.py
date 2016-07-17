@@ -16,7 +16,6 @@ from std_msgs.msg import Header
 from std_srvs.srv import SetBool, SetBoolResponse
 from geometry_msgs.msg import Pose2D, PoseStamped, Pose, Point
 
-
 class BuoyFinder:
     _min_size = 50
 
@@ -24,7 +23,7 @@ class BuoyFinder:
         self.transformer = tf.TransformListener()
         rospy.sleep(2.0)
 
-        self.search = False
+        self.search = True
         self.last_image = None
         self.last_draw_image = None
         self.last_image_time = None
@@ -36,19 +35,8 @@ class BuoyFinder:
         self.rviz = rviz.RvizVisualizer()
 
         rospack = rospkg.RosPack()
-        boost_path = os.path.join(
-            rospack.get_path('sub8_perception'),
-            'sub8_vision_tools',
-            'machine_learning',
-            'classifiers',
-            'red_gentle_20tree_9depth.dic'
-        )
 
-        self.boost = cv2.Boost()
-        rospy.loginfo("Loading boost")
-        self.boost.load(boost_path)
-        rospy.loginfo("Boost loaded")
-
+        # TODO: consolidate all these dictionaries into one big one.
         self.observations = {
             'red':deque(),
             'yellow':deque(),
@@ -60,9 +48,14 @@ class BuoyFinder:
             'green':deque()
         }
         self.buoys = {
-            'green': '/color/buoy/green',
-            'red': '/color/buoy/red',
-            'yellow': '/color/buoy/yellow',
+            # Boost classifier paths
+            'yellow': "/home/uf-mil/bags/ML/classifiers/yellow/gentle_5tree_15depth.dic"
+            'red': None
+
+            # Threshold paths
+            #'green': '/color/buoy/green',
+            #'red': '/color/buoy/red',
+            #'yellow': '/color/buoy/yellow',
         }
         self.last_t = {
             'green': None,
@@ -82,7 +75,17 @@ class BuoyFinder:
             'yellow': 2,
         }
 
-        self.image_sub = sub8_ros_tools.Image_Subscriber('/stereo/right/image_raw', self.image_cb)
+        for color in self.buoys.keys():
+            if self.buoys[color] is None:
+                rospy.logwarn('Classifier path for {} not found!'.format(color))
+                continue
+
+            self.buoys[color] = cv2.Boost()
+            rospy.loginfo("Loading {} boost".format(color))
+            self.buoys[color].load(boost_path)
+            rospy.loginfo("Classifier for {} buoy loaded".format(color))
+
+        self.image_sub = sub8_ros_tools.Image_Subscriber('/stereo/left/image_raw', self.image_cb)
         self.image_pub = sub8_ros_tools.Image_Publisher('/vision/buoy_2d/target_info')
         self.mask_pub = sub8_ros_tools.Image_Publisher('/vision/buoy_2d/mask')
 
@@ -111,7 +114,7 @@ class BuoyFinder:
         if response is False:
             print 'did not find'
             resp = VisionRequest2DResponse(
-                header=sub8_ros_tools.make_header(frame='/stereo_front/right'),
+                header=sub8_ros_tools.make_header(frame='/stereo_front/left'),
                 found=False
             )
 
@@ -119,7 +122,7 @@ class BuoyFinder:
             # Fill in
             center, radius = response
             resp = VisionRequest2DResponse(
-                header=Header(stamp=timestamp, frame_id='/stereo_front/right'),
+                header=Header(stamp=timestamp, frame_id='/stereo_front/left'),
                 pose=Pose2D(
                     x=center[0],
                     y=center[1],
@@ -221,20 +224,20 @@ class BuoyFinder:
         best_ret = None
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-        # Segmentation here (machine learning right now)
-        # some_observations = machine_learning.boost.observe(img)
-        # prediction2 = [int(x) for x in [self.boost.predict(obs) for obs in some_observations]]
-        # mask = np.reshape(prediction2, img[:, :, 2].shape).astype(np.uint8) * 255
-
-        low = np.array(rospy.get_param(self.buoys[buoy_type] + '/hsv_low')).astype(np.int32)
-        high = np.array(rospy.get_param(self.buoys[buoy_type] + '/hsv_high')).astype(np.int32)
-        mask = cv2.inRange(hsv, low, high)
+        #Segmentation here (machine learning right now)
+        some_observations = machine_learning.boost.observe(img)
+        prediction2 = [int(x) for x in [self.buoys[buoy_type].predict(obs) for obs in some_observations]]
+        mask = np.reshape(prediction2, img[:, :, 2].shape).astype(np.uint8) * 255
+        # Thresholding here
+        # low = np.array(rospy.get_param(self.buoys[buoy_type] + '/hsv_low')).astype(np.int32)
+        # high = np.array(rospy.get_param(self.buoys[buoy_type] + '/hsv_high')).astype(np.int32)
+        # mask = cv2.inRange(hsv, low, high)
 
         rospy.sleep(.5)
 
         kernel = np.ones((13,13),np.uint8)
         mask = cv2.dilate(mask, kernel, iterations = 1)
-        mask = cv2.erode(mask, kernel, iterations = 1)
+        mask = cv2.erode(mask, kernel, iterations = 2)
 
         self.mask_pub.publish(np.dstack([mask] * 3))
 
@@ -260,14 +263,14 @@ class BuoyFinder:
             if not self.sanity_check(tuple_center, timestamp):
                 return False
 
-            (t, rot_q) = self.transformer.lookupTransform('/map', '/stereo_front/right', timestamp)
+            (t, rot_q) = self.transformer.lookupTransform('/map', '/stereo_front/left', timestamp)
             trans = np.array(t)
             R = sub8_ros_tools.geometry_helpers.quaternion_matrix(rot_q)
 
-            # self.rviz.draw_ray_3d(tuple_center, self.camera_model, self.draw_colors[buoy_type], frame='/stereo_front/right', _id=self._id + 100)
-            # self._id += 1
-            # if self._id >= self.max_observations * 3:
-            #     self._id = 0
+            self.rviz.draw_ray_3d(tuple_center, self.camera_model, self.draw_colors[buoy_type], frame='/stereo_front/left', _id=self._id + 100, timestamp=timestamp)
+            self._id += 1
+            if self._id >= self.max_observations * 3:
+                self._id = 0
 
             if (self.last_t[buoy_type] is None) or (np.linalg.norm(trans - self.last_t[buoy_type]) > 0.3):
                 self.last_t[buoy_type] = trans
@@ -308,7 +311,7 @@ class BuoyFinder:
         Check if the observation is unreasonable. More can go here if we want.
         '''
         sane = True
-        if np.linalg.norm(self.transformer.lookupTwist('/map', '/stereo_front/right', timestamp, rospy.Duration(.5))) > 1:
+        if np.linalg.norm(self.transformer.lookupTwist('/map', '/stereo_front/left', timestamp, rospy.Duration(.5))) > 1:
             rospy.logerr("BUOY - Moving too fast. Not observing buoy.")
             sane = False
 
