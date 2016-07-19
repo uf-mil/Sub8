@@ -23,20 +23,14 @@ class Ocr:
         self.camera_model = None
         self.white_list = None
         self.ocr_service = rospy.Service('vision/ocr', OcrRequest, self.request_characters)
-        self.image_sub = sub8_ros_tools.Image_Subscriber('/forward_camera/image_rect_color', self.image_cb)
+        self.image_sub = sub8_ros_tools.Image_Subscriber('/stereo_front/right/image_rect_color', self.image_cb)
 
     def request_characters(self, srv):
         self.white_list = srv.target_name
         if (self.last_image != None):
             print 'requesting', srv
             response = self.ocr()
-
-            if response is False:
-                print 'did not find'
-                resp = ''
-            else:
-                resp = response
-            return resp
+            return response
 
     def image_cb(self, image):
         '''Hang on to last image'''
