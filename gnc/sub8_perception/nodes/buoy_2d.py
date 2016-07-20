@@ -16,6 +16,14 @@ from std_msgs.msg import Header
 from std_srvs.srv import SetBool, SetBoolResponse
 from geometry_msgs.msg import Pose2D, PoseStamped, Pose, Point
 
+# Boost files (maybe move to launch?) - I put these here so they're easy to change
+boost_to_the_moon = True
+YELLOW = 'gentle_3tree_5depth.dic'
+RED = 'gentle_3tree_5depth.dic'
+GREEN = 'gentle_3tree_5depth.dic'
+
+rospack = rospkg.RosPack()
+
 class BuoyFinder:
     _min_size = 100
     '''
@@ -50,17 +58,22 @@ class BuoyFinder:
             'yellow':deque(),
             'green':deque()
         }
-        self.buoys = {
-            # Boost classifier paths
-            'yellow': "/home/matt/Documents/classifiers/yellow/subset_trained/gentle_9tree_11depth.dic",
-            'red': "/home/matt/Documents/classifiers/red/pool_only/red_gentle_9tree_9depth.dic",
-            'green': "/home/matt/Documents/classifiers/green/temp/gentle_7tree_20depth.dic"
 
-            # Threshold paths
-            # 'green': '/color/buoy/green',
-            # 'red': '/color/buoy/red',
-            # 'yellow': '/color/buoy/yellow',
-        }
+        if boost_to_the_moon:
+            self.buoys = {
+                # Boost classifier paths
+                'yellow': os.path.join(rospack.get_path('sub8_perception'), 'ml_classifiers/buoys/yellow/' + YELLOW),
+                'red': os.path.join(rospack.get_path('sub8_perception'), 'ml_classifiers/buoys/red/' + RED),
+                'green': os.path.join(rospack.get_path('sub8_perception'), 'ml_classifiers/buoys/green/' + GREEN)
+            }
+        else:
+            self.buoys = {
+                #Threshold paths
+                'green': '/color/buoy/green',
+                'red': '/color/buoy/red',
+                'yellow': '/color/buoy/yellow',
+            }
+
         self.last_t = {
             'green': None,
             'red': None,
@@ -79,16 +92,17 @@ class BuoyFinder:
             'yellow': 2,
         }
 
-        for color in self.buoys.keys():
-            if self.buoys[color] is None:
-                rospy.logwarn('Classifier path for {} not found!'.format(color))
-                continue
+        if boost_to_the_moon:
+            for color in self.buoys.keys():
+                if self.buoys[color] is None:
+                    rospy.logwarn('Classifier path for {} not found!'.format(color))
+                    continue
 
-            path = self.buoys[color]
-            self.buoys[color] = cv2.Boost()
-            rospy.loginfo("BUOY - Loading {} boost...".format(color))
-            self.buoys[color].load(path)
-            rospy.loginfo("BUOY - Classifier for {} buoy loaded.".format(color))
+                path = self.buoys[color]
+                self.buoys[color] = cv2.Boost()
+                rospy.loginfo("BUOY - Loading {} boost...".format(color))
+                self.buoys[color].load(path)
+                rospy.loginfo("BUOY - Classifier for {} buoy loaded.".format(color))
 
         self.image_sub = sub8_ros_tools.Image_Subscriber('/stereo/left/image_raw', self.image_cb)
         self.image_pub = sub8_ros_tools.Image_Publisher('/vision/buoy_2d/target_info')
@@ -231,15 +245,17 @@ class BuoyFinder:
         max_area = 0
         best_ret = None
 
-        # Segmentation here (machine learning right now)
-        some_observations = machine_learning.boost.observe(img)
-        prediction2 = [int(x) for x in [self.buoys[buoy_type].predict(obs) for obs in some_observations]]
-        mask = np.reshape(prediction2, img[:, :, 2].shape).astype(np.uint8) * 255
-        # Thresholding here
-        # hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        # low = np.array(rospy.get_param(self.buoys[buoy_type] + '/hsv_low')).astype(np.int32)
-        # high = np.array(rospy.get_param(self.buoys[buoy_type] + '/hsv_high')).astype(np.int32)
-        # mask = cv2.inRange(hsv, low, high)
+        if boost_to_the_moon:
+            # Segmentation here (machine learning right now)
+            some_observations = machine_learning.boost.observe(img)
+            prediction2 = [int(x) for x in [self.buoys[buoy_type].predict(obs) for obs in some_observations]]
+            mask = np.reshape(prediction2, img[:, :, 2].shape).astype(np.uint8) * 255
+        else:
+            #Thresholding here
+            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            low = np.array(rospy.get_param(self.buoys[buoy_type] + '/hsv_low')).astype(np.int32)
+            high = np.array(rospy.get_param(self.buoys[buoy_type] + '/hsv_high')).astype(np.int32)
+            mask = cv2.inRange(hsv, low, high)
 
         rospy.sleep(.5)
 
