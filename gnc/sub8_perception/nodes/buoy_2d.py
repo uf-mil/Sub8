@@ -34,7 +34,7 @@ class BuoyFinder:
         self.last_image_time = None
         self.camera_model = None
         self.multi_obs = None
-        self.max_observations = 20
+        self.max_observations = 200
         self._id = 0  # Only for display
 
         self.rviz = rviz.RvizVisualizer()
@@ -251,8 +251,6 @@ class BuoyFinder:
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
             mask = cv2.inRange(img, *self.buoys[buoy_type][:2])
-
-        rospy.sleep(.5)
 
         kernel = np.ones((13,13),np.uint8)
         mask = cv2.dilate(mask, kernel, iterations = 2)
