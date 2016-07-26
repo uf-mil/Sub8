@@ -8,6 +8,7 @@ import sub8_ros_tools
 from sub8_msgs.srv import VisionRequest2DResponse, VisionRequest2D
 from std_msgs.msg import Header
 from geometry_msgs.msg import Pose2D
+from uf_common.msg import Float64Stamped  # This needs to be deprecated
 
 
 def contour_sort(l):
@@ -55,6 +56,8 @@ class BinFinder:
         self.pose_service = rospy.Service('vision/bin/2D', VisionRequest2D, self.request_bin)
         self.image_sub = sub8_ros_tools.Image_Subscriber('/down_camera/image_rect_color', self.image_cb)
         self.image_pub = sub8_ros_tools.Image_Publisher('/vision/bin_2d/target_info')
+        self.range = None
+        self.range_sub = rospy.Subscriber("dvl/range", Float64Stamped, self.range_callback)
 
         # Occasional status publisher
         self.timer = rospy.Timer(rospy.Duration(1.0), self.publish_target_info)
@@ -112,6 +115,7 @@ class BinFinder:
             self.camera_model = image_geometry.PinholeCameraModel()
             self.camera_model.fromCameraInfo(self.image_sub.camera_info)
 
+
     def find_single_bin(self, img, bin_type):
         """Find the bins and their orientations."""
         assert bin_type in self.bins[bin_type], "Bins_2d does not know bin color: {}".format(bin_type)
@@ -154,11 +158,24 @@ class BinFinder:
                     ellipse = cv2.fitEllipse(contours[i])
                     cv2.ellipse(debug_image, ellipse, (170), 2)
                 cv2.circle(debug_image, point, 5, (0, 0, 255), -1)
+                pixels = np.copy(point)
                 point = [cx - (img_w / 2), cy - (img_h / 2)]
                 tuple_center = (point[0], point[1], 0)
                 self.last_draw_image = debug_image
                 rad = ((rad - 180) * np.pi) / 180.0
+                P = np.asarray(self.image_sub.camera_info.P).reshape(3,4)
+                _P = np.linalg.pinv(P)
+                pixels = np.asarray([pixels[0], pixels[1], 1])
+                ray = _P.dot(pixels)
+                tuple_center = (self.range*ray)
+                print tuple_center
                 return tuple_center, rad
+
+    def range_callback(self, msg):
+        '''Handle range data grabbed from dvl'''
+        # future: should be /base_link/dvl, no?
+        frame = '/dvl'
+        self.range = msg.data
 
     def find_bins(self, img, srv):
         draw_image = np.copy(img)
