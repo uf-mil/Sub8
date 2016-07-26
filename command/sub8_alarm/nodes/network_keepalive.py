@@ -17,5 +17,5 @@ class KeepAlive(object):
 
 if __name__ == '__main__':
     rospy.init_node('network_keepalive')
-    ka = KeepAlive()
+    ka = KeepAlive(rospy.get_param('/autonomous'))
     rospy.spin()
