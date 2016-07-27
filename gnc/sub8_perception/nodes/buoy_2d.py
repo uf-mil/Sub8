@@ -94,7 +94,7 @@ class BuoyFinder:
         self.transformer = tf.TransformListener()
         rospy.sleep(2.0)
 
-        self.search = True
+        self.search = False
         self.last_image = None
         self.last_draw_image = None
         self.last_image_time = None
