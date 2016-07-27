@@ -4,13 +4,12 @@ from std_msgs.msg import String
 
 
 class KeepAlive(object):
-    def __init__(self, auto):
+    def __init__(self):
         self.pub = rospy.Publisher('/keep_alive', String, queue_size=1)
-        self.timer = rospy.Timer(rospy.Duration(0.01), self.keepalive_pub)
+        self.timer = rospy.Timer(rospy.Duration(0.1), self.keepalive_pub)
 
     def keepalive_pub(self, *args):
-        self.auto_mode = KeepAlive(rospy.get_param('/autonomous'))
-        if self.auto_mode:
+        if rospy.get_param('/autonomous'):
             self.pub.publish(String('auto'))
         else:
             self.pub.publish(String('keep_alive'))
