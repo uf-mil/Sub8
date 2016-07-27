@@ -5,11 +5,11 @@ from std_msgs.msg import String
 
 class KeepAlive(object):
     def __init__(self, auto):
-        self.auto_mode = auto
         self.pub = rospy.Publisher('/keep_alive', String, queue_size=1)
         self.timer = rospy.Timer(rospy.Duration(0.01), self.keepalive_pub)
 
     def keepalive_pub(self, *args):
+        self.auto_mode = KeepAlive(rospy.get_param('/autonomous'))
         if self.auto_mode:
             self.pub.publish(String('auto'))
         else:
@@ -18,5 +18,5 @@ class KeepAlive(object):
 
 if __name__ == '__main__':
     rospy.init_node('network_keepalive')
-    ka = KeepAlive(rospy.get_param('~auto'))
+    ka = KeepAlive()
     rospy.spin()
