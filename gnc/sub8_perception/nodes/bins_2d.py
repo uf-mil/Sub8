@@ -134,12 +134,12 @@ class BinFinder:
                or least orange bin is selected.
             """
             if len(contours) > 0:
-                bins = 4
+                bins = 2
                 if (self.bin_type == 'orange'):
                     orangeness = 0
                 else:
                     orangeness = 100000
-                if len(contours) < 4:
+                if len(contours) < bins:
                     bins = len(contours)
                 for i in range(0, bins):
                     x, y, w, h = cv2.boundingRect(contours[i])
@@ -162,18 +162,18 @@ class BinFinder:
                 point = [cx - (img_w / 2), cy - (img_h / 2)]
                 tuple_center = (point[0], point[1], 0)
                 self.last_draw_image = debug_image
-                rad = ((rad - 180) * np.pi) / 180.0
+                rad = ((rad) * np.pi) / 180.0
                 P = np.asarray(self.image_sub.camera_info.P).reshape(3,4)
                 _P = np.linalg.pinv(P)
                 pixels = np.asarray([pixels[0], pixels[1], 1])
                 ray = _P.dot(pixels)
-                tuple_center = (self.range*ray)
+                tuple_center = self.range*ray
+                tuple_center[2] = -tuple_center[2]+0.45+1 #height of the bin and some buffer
                 print tuple_center
                 return tuple_center, rad
 
     def range_callback(self, msg):
         '''Handle range data grabbed from dvl'''
-        # future: should be /base_link/dvl, no?
         frame = '/dvl'
         self.range = msg.data
 
