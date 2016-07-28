@@ -48,7 +48,6 @@ def run(sub):
 
         response = pose_to_numpy(response.pose.pose)
 
-        # Using euler - shoot me.
         yaw = tf.transformations.euler_from_quaternion(response[1])[2]
 
         est_target_rotations.append(yaw)
@@ -59,6 +58,7 @@ def run(sub):
         yield sub._node_handle.sleep(3.0)
     if COLOR == 'orange':
         yield sub.move.backward(0.5).go(speed=SPEED)
+        yield sub,move.down(0.5).go(speed=SPEED)
         yield sub.move.forward(1.5).go(speed=SPEED)
         yield sub.move.set_position(response[0]).yaw_left(yaw).zero_roll_and_pitch().go(speed=SPEED)
         yield sub,move.down(0.5).go(speed=SPEED)
