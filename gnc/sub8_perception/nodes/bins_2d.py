@@ -54,7 +54,7 @@ class BinFinder:
         self.last_image_time = None
         self.camera_model = None
         self.pose_service = rospy.Service('vision/bin/2D', VisionRequest2D, self.request_bin)
-        self.image_sub = sub8_ros_tools.Image_Subscriber('/down/left/image_raw', self.image_cb)
+        self.image_sub = sub8_ros_tools.Image_Subscriber('/down/left/image_rect_color', self.image_cb)
         self.image_pub = sub8_ros_tools.Image_Publisher('/vision/bin_2d/target_info')
         self.range = None
         self.range_sub = rospy.Subscriber("dvl/range", Float64Stamped, self.range_callback)
