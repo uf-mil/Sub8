@@ -17,6 +17,7 @@ set(SRCS
 	src/space_information_generator.cc
 	src/sub8_state_validity_checker.cc
 	src/tgen_manager.cc
+	src/tgen_geometry_obstacles.cc
 )
 
 catkin_package(
@@ -56,6 +57,7 @@ add_dependencies(${PROJECT_NAME}
 if(CATKIN_ENABLE_TESTING)
 	catkin_add_gtest(${PROJECT_NAME}_unit_tests
 		test/sub8_state_validity_checker_test.cc
+		test/tgen_geometry_obstacles_test.cc
 		test/test_driver.cc
 		${SRCS}
 	)

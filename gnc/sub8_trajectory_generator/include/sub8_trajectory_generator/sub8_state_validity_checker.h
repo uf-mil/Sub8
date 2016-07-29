@@ -10,6 +10,8 @@
 #include "ompl/base/SpaceInformation.h"
 #include "ompl/base/Path.h"
 #include "tgen_common.h"
+#include "tgen_obstacle_checker.h"
+#include "tgen_geometry_obstacles.h"
 
 using ompl::base::StateValidityChecker;
 using ompl::base::Path;
@@ -30,9 +32,11 @@ typedef boost::shared_ptr<Sub8StateValidityChecker> Sub8StateValidityCheckerPtr;
 // necessary for determining whether a trajectory is safe
 class Sub8StateValidityChecker : public StateValidityChecker {
  public:
-  Sub8StateValidityChecker(const SpaceInformationPtr& si)
-      : StateValidityChecker(si) {}
-
+  Sub8StateValidityChecker(const SpaceInformationPtr& si,
+                           double obstacle_tolerance)
+      : StateValidityChecker(si),
+        _obstacle_checking_tolerance(obstacle_tolerance),
+        _obs_checker(new TGenGeometryObstacles()) {}
   /////////////////////////////////////////////////////
   // Inherited methods
   ////////////////////////////////////////////////////
@@ -43,12 +47,11 @@ class Sub8StateValidityChecker : public StateValidityChecker {
   // or ompl::control::ControlSpace::propagate() return states
   // that are outside of bounds, this function should also make
   // a call to ompl::control::SpaceInformation::satisfiesBounds().
-  virtual bool isValid(const State* state) const;
+  virtual bool isValid(const State* state) const override;
 
-  // Report the distance to the nearest invalid state
-  // when starting from state. If the distance is negative,
-  // the value of clearance is the penetration depth.
-  virtual double clearance(const State* state) const;
+ private:
+  TGenObstacleCheckerPtr _obs_checker;
+  double _obstacle_checking_tolerance;
 };
 }
 }

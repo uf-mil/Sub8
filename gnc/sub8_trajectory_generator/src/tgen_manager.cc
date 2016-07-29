@@ -11,6 +11,7 @@
 #include "ompl/base/goals/GoalState.h"
 #include "ompl/geometric/planners/rrt/RRTstar.h"
 #include "ompl/geometric/planners/rrt/RRTConnect.h"
+#include "ompl/geometric/planners/AnytimePathShortening.h"
 #include "ompl/geometric/PathGeometric.h"
 #include "ompl/base/spaces/RealVectorBounds.h"
 #include <boost/filesystem.hpp>
@@ -20,7 +21,7 @@
 #include <cmath>
 
 // File IO to save solution to file
-#if 0
+#if 1
 #include <iostream>
 #include <fstream>
 #endif
@@ -35,14 +36,14 @@ using ompl::base::GoalState;
 using ompl::base::ProblemDefinitionPtr;
 using ompl::base::RealVectorBounds;
 using ompl::geometric::PathGeometric;
-using ompl::geometric::RRTConnect;
-using ompl::geometric::RRTstar;
 
 namespace fs = ::boost::filesystem;
 
 TGenManager::TGenManager(AlarmBroadcasterPtr&& ab) : _alarm_broadcaster(ab) {
-  int planner_type;
-  int range;
+  // int planner_type;
+  int num_planners;
+  double range;
+
   const std::string planning_failure_alarm =
       "sub8_trajectory_generator_planning_failure";
 
@@ -51,25 +52,46 @@ TGenManager::TGenManager(AlarmBroadcasterPtr&& ab) : _alarm_broadcaster(ab) {
 
   _sub8_si = ss_gen->generate();
 
-  ros::param::get("planner_type", planner_type);
-  ros::param::get("range", range);
+  if (ros::param::has("num_planners")) {
+    ros::param::get("num_planners", num_planners);
+    ROS_WARN("Running the OMPL Anytime Planner with %d planners", num_planners);
+  } else {
+    num_planners = 5;  // default
+    ROS_WARN("Unable to retrieve desired num of planners, using default %d",
+             num_planners);
+  }
 
-  switch (planner_type) {
-    case 1:
-      _sub8_planner =
-          boost::shared_ptr<Planner>(new ompl::geometric::RRTstar(_sub8_si));
-      ROS_INFO("Using OMPL's RRTstar path-planner");
-      // set the maximum distance the planner can extend itself per "step" in
-      // meters
-      _sub8_planner->as<ompl::geometric::RRTstar>()->setRange(range);
-      break;
-    default:
-      _sub8_planner =
-          boost::shared_ptr<Planner>(new ompl::geometric::RRTConnect(_sub8_si));
-      ROS_INFO("Using OMPL's RRTConnect path-planner");
-      // set the maximum distance the planner can extend itself per "step" in
-      // meters
-      _sub8_planner->as<ompl::geometric::RRTConnect>()->setRange(range);
+  if (ros::param::has("range")) {
+    ros::param::get("range", range);
+  } else {
+    range = 0.05;  // default
+    ROS_WARN("Unable to retrieve desired range, using default %f", range);
+  }
+
+  // For integration testing, grab a shorter test time
+  if (ros::param::has("test_solve_time")) {
+    ros::param::get("test_solve_time", _solve_time);
+  } else {
+    if (ros::param::has("solve_time")) {
+      ros::param::get("solve_time", _solve_time);
+    } else {
+      _solve_time = 30.0;  // default
+      ROS_WARN(
+          "Unable to retrieve desired allowed solve time, using default %f",
+          _solve_time);
+    }
+  }
+
+  ROS_WARN("Alloted time for finding a path is %f", _solve_time);
+
+  _sub8_planner =
+      PlannerPtr(new ompl::geometric::AnytimePathShortening(_sub8_si));
+
+  for (unsigned int i = 0; i < num_planners; ++i) {
+    PlannerPtr rrt_connect(new ompl::geometric::RRTConnect(_sub8_si));
+    rrt_connect->as<ompl::geometric::RRTConnect>()->setRange(range);
+    _sub8_planner->as<ompl::geometric::AnytimePathShortening>()->addPlanner(
+        rrt_connect);
   }
 
   // initialize alarms
@@ -80,16 +102,35 @@ TGenManager::TGenManager(AlarmBroadcasterPtr&& ab) : _alarm_broadcaster(ab) {
 
 bool TGenManager::setProblemDefinition(const State* start_state,
                                        const State* goal_state) {
-  // Check the state validity incase the start or goal state 
+  // Check the state validity incase the start or goal state
   // is on top of an obstacle
   if (!(_sub8_si->getStateValidityChecker()->isValid(start_state)) ||
       !(_sub8_si->getStateValidityChecker()->isValid(goal_state))) {
-      ROS_ERROR("Bad start state or goal state provided");
-      return false;
+    ROS_ERROR("Bad start state or goal state provided");
+
+    ROS_ERROR("start_state.x: %f",
+              start_state->as<Sub8StateSpace::StateType>()->getX());
+    ROS_ERROR("start_state.y: %f",
+              start_state->as<Sub8StateSpace::StateType>()->getY());
+    ROS_ERROR("start_state.z: %f",
+              start_state->as<Sub8StateSpace::StateType>()->getZ());
+    ROS_ERROR("start_state.yaw: %f",
+              start_state->as<Sub8StateSpace::StateType>()->getYaw());
+
+    ROS_ERROR("goal_state.x: %f",
+              start_state->as<Sub8StateSpace::StateType>()->getX());
+    ROS_ERROR("goal_state.y: %f",
+              start_state->as<Sub8StateSpace::StateType>()->getY());
+    ROS_ERROR("goal_state.z: %f",
+              start_state->as<Sub8StateSpace::StateType>()->getZ());
+    ROS_ERROR("goal_state.yaw: %f",
+              start_state->as<Sub8StateSpace::StateType>()->getYaw());
+
+    return false;
   }
 
   if (!(_sub8_planner->isSetup())) {
-      _sub8_planner->setup();
+    _sub8_planner->setup();
   }
 
   _sub8_planner->clear();
@@ -110,7 +151,7 @@ bool TGenManager::solve() {
   bool success = false;
 
   // arg for "solve" is the solve time
-  PlannerStatus pstatus = _sub8_planner->solve(30.0);
+  PlannerStatus pstatus = _sub8_planner->solve(_solve_time);
 
   // Switch on the value of the PlannerStatus enum "StateType"
   // Only raise alarms on issues that require a system response.
@@ -217,7 +258,7 @@ sub8_msgs::PathPoint TGenManager::stateToPathPoint(const State* s) {
 }
 
 std::vector<State*> TGenManager::getPath() {
-#if 0
+#if 1
   using namespace std;
 
   ofstream out_file;

@@ -10,6 +10,7 @@
 #include "ompl/base/spaces/RealVectorBounds.h"
 #include "ompl/base/spaces/SO2StateSpace.h"
 
+using ompl::base::State;
 using ompl::base::CompoundStateSpace;
 using ompl::base::RealVectorStateSpace;
 using ompl::base::RealVectorBounds;
@@ -17,6 +18,7 @@ using ompl::base::SO2StateSpace;
 using ompl::base::StateSpacePtr; 
 
 namespace sub8 {
+
 namespace trajectory_generator {
 
 // A state space representing translation in 3D + rotation in the plane

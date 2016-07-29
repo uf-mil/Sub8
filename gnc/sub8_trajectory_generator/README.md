@@ -36,4 +36,5 @@ The TGEN raises an alarm called `sub8_trajectory_generator_planning_failed` if s
 ## Miscellaneous ##
 
 * filenames beginning with "sub8_" are extensions to the OMPL framework
+* To add geometric obstacles to the scene for testing, change the "test_geometric_obstacles" param. Currently, up to 3 cubes can be added to the scene, but it is easy to add more. See the `TGenGeometryObstacles.cc` file. 
 

@@ -39,7 +39,7 @@ class TGenManagerTest : public ::testing::Test {
   const ompl::base::StateSpacePtr& ss() const { return _test_space; }
 
   // Sample a random start and goal state
-  std::vector<State*> randomProblemDef() {
+  std::vector<State*> randomProblemDefinition() {
     std::vector<State*> pd;
 
     // Set up start and goal states
@@ -64,7 +64,7 @@ class TGenManagerTest : public ::testing::Test {
 TEST_F(TGenManagerTest, testSetProblemDefinition) {
   TGenManagerPtr test_tgen_manager = tgenManagerFactory();
 
-  std::vector<State*> pd = randomProblemDef();
+  std::vector<State*> pd = randomProblemDefinition();
   test_tgen_manager->setProblemDefinition(pd[0], pd[1]);
 
   ss()->freeState(pd[0]);
@@ -78,7 +78,8 @@ TEST_F(TGenManagerTest, testBadProblemDefinition) {
   State* start_state = ss()->allocState();
   State* goal_state = ss()->allocState();
 
-  std::vector<State*> pd = randomProblemDef();
+  std::vector<State*> pd = randomProblemDefinition();
+  // clearly out of bounds
   pd[0]->as<Sub8StateSpace::StateType>()->setX(10000);
 
   ASSERT_FALSE(test_tgen_manager->setProblemDefinition(pd[0], pd[1]));
@@ -87,38 +88,21 @@ TEST_F(TGenManagerTest, testBadProblemDefinition) {
 TEST_F(TGenManagerTest, testGeneratePath) {
   TGenManagerPtr test_tgen_manager = tgenManagerFactory();
 
-  std::vector<State*> pd = randomProblemDef();
+  std::vector<State*> pd = randomProblemDefinition();
   test_tgen_manager->setProblemDefinition(pd[0], pd[1]);
 
-  ROS_WARN("Testing TGEN planning with a random start and goal...");
-
-  ASSERT_TRUE(test_tgen_manager->solve());
-
-  ss()->freeState(pd[0]);
-  ss()->freeState(pd[1]);
-}
-
-TEST_F(TGenManagerTest, testGetPath) {
-  TGenManagerPtr test_tgen_manager = tgenManagerFactory();
-
-  std::vector<State*> pd = randomProblemDef();
-  test_tgen_manager->setProblemDefinition(pd[0], pd[1]);
+  ROS_WARN(
+      "Testing TGEN planning with a random start and goal state and no "
+      "obstacles");
 
   ASSERT_TRUE(test_tgen_manager->solve());
 
   std::vector<State*> path = test_tgen_manager->getPath();
 
+  // Verify that a path longer than just the start and goal state was found
   ASSERT_GT(path.size(), 2);
-}
 
-TEST_F(TGenManagerTest, testGeneratePathMessage) {
-  TGenManagerPtr test_tgen_manager = tgenManagerFactory();
-
-  std::vector<State*> pd = randomProblemDef();
-  test_tgen_manager->setProblemDefinition(pd[0], pd[1]);
-
-  ASSERT_TRUE(test_tgen_manager->solve());
-
+  // Test generating a path message
   sub8_msgs::Path path_msg = test_tgen_manager->generatePathMessage();
 
   std::vector<sub8_msgs::PathPoint> pp = path_msg.path;
@@ -131,6 +115,9 @@ TEST_F(TGenManagerTest, testGeneratePathMessage) {
               0.01);
   ASSERT_NEAR(pd[0]->as<Sub8StateSpace::StateType>()->getYaw(), pp[0].yaw,
               0.01);
+
+  ss()->freeState(pd[0]);
+  ss()->freeState(pd[1]);
 }
 
 // TODO - needs Octomap
