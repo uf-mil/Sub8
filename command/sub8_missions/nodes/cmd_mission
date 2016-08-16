@@ -15,7 +15,7 @@ def main():
     try:
         nh_args = yield txros.NodeHandle.from_argv_with_remaining('sub8_cmd_mission')
 
-        usage_msg = ("Pass any pose editor commands. \n ex. forward")
+        usage_msg = ("Pass any pose editor commands. \n ex. 'forward 1' to move forward 1 meter.")
         desc_msg = "-- Command Line Missions --"
         parser = argparse.ArgumentParser(usage=usage_msg, description=desc_msg)
         parser.add_argument(dest='command', type=str,

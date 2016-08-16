@@ -21,7 +21,7 @@ def main():
         desc_msg = "-- Mr. Mission Manager --"
         parser = argparse.ArgumentParser(usage=usage_msg, description=desc_msg)
         parser.add_argument(dest='mission_names', nargs='+',
-                            help="The naem of the mission you'd like to run (ex: stop)")
+                            help="The name of the mission you'd like to run (ex: stop)")
 
         parser.add_argument('--test', dest='test', action='store_true',
                             help="Set this flag if you'd like to ignore motions")
