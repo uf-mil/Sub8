@@ -203,7 +203,7 @@ else
     cd $CATKIN_DIR/src
 fi
 
-CMAKE_PREFIX_PATH=/opt/ros/kinetic
+CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:/opt/ros/kinetic
 git clone https://github.com/ros-drivers/driver_common
 catkin_make -C $CATKIN_DIR -B
 
