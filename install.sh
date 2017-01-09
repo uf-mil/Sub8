@@ -47,11 +47,22 @@ check_host() {
 }
 
 REQUIRED_OS="xenial"
+
+# Confirmation of where to put CATKIN directory
 CATKIN_DIR=~/mil_ws
+while true; do
+    instlog "The CATKIN Directory is $CATKIN_DIR. Is this okay(y/n)? "
+    read yn
+    case $yn in
+        [Yy]* ) break;;
+        [Nn]* ) read -p "Enter a new directory: " CATKIN_DIR; break;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
 
 # The paths to the aliases configuration files
 BASHRC_FILE=~/.bashrc
-ALIASES_FILE=~/.mil_aliases
+ALIASES_FILE=$CATKIN_DIR/src/.sub_aliases
 
 #==================#
 # Pre-Flight Check #
@@ -141,7 +152,7 @@ instlog "Installing Catkin and Rosdep"
 sudo apt-get update -qq
 sudo apt-get install -qq catkin python-rosdep
 
-instlog "Installing ROS Kinetic base packages"
+instlog "Installing the full ROS Kinetic"
 sudo apt-get install -qq ros-kinetic-desktop-full 
 
 # Source ROS configurations for bash on this user account
@@ -159,23 +170,27 @@ if !([ -f /etc/ros/rosdep/sources.list.d/20-default.list ]); then
 fi
 rosdep update
 
-instalog "Installing Sub8 ROS dependencies"
+instlog "Installing Sub8 ROS dependencies"
 sudo apt-get install -qq binutils-dev
 sudo apt-get install -qq ros-kinetic-ompl
 sudo apt-get install -qq ros-kinetic-spacenav-node
 
 # Get older version of Google protobuf for Gazebo
-instlog "Installing Google protobuf v2.6.1"
-wget https://github.com/google/protobuf/releases/download/v2.6.1/protobuf-2.6.1.tar.gz
-tar -xvzf protobuf-2.6.1.tar.gz
-cd protobuf-2.6.1
-./configure
-make
-make check
-sudo make install
-cd ..
-sudo rm -r protobuf-2.6.1
-sudo rm -r protobuf-2.6.1.tar.gz
+if !( protoc --version | grep "libprotoc 2.6.1" ); then
+    instlog "Installing Google protobuf v2.6.1"
+    wget https://github.com/google/protobuf/releases/download/v2.6.1/protobuf-2.6.1.tar.gz
+    tar -xvzf protobuf-2.6.1.tar.gz
+    cd protobuf-2.6.1
+    ./configure
+    make
+    make check
+    sudo make install
+    cd ..
+    sudo rm -r protobuf-2.6.1
+    sudo rm -r protobuf-2.6.1.tar.gz
+else
+    instlog "Detected correct version of protoc"
+fi
 
 # Set up catkin workspace directory
 if !([ -f $CATKIN_DIR/src/CMakeLists.txt ]); then
@@ -194,13 +209,21 @@ catkin_make -C $CATKIN_DIR -B
 
 source ../devel/setup.bash
 
-if !(ls $CATKIN_DIR/src | grep --quiet "Sub8"); then
+# Clones the Sub8 directory unless it already exists
+if !(ls $CATKIN_DIR/src | grep --quiet "sub8"); then
     instlog "Downloading the Sub8 repository"
     cd $CATKIN_DIR/src
     git clone https://github.com/uf-mil/sub8.git
     cd $CATKIN_DIR/src/Sub8
     git remote rename origin upstream
     instlog "Make sure you change your git origin to point to your own fork! (git remote add origin your_forks_url)"
+fi
+
+# Adds Sub8 aliases to $BASHRC_FILE unless already exists
+if !(cat $BASHRC_FILE | grep --quiet "source $ALIASES_FILE"); then
+    echo "" >> $BASHRC_FILE
+    echo "# Adds Sub8 aliases to shell environment" >> $BASHRC_FILE
+    echo "source $ALIASES_FILE" >> $BASHRC_FILE
 fi
 
 #================================#
