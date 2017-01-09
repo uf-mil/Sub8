@@ -101,7 +101,7 @@ if !($OS_CHECK); then
 
     # The script will not allow the user to install on an unsupported OS
     instwarn "Terminating installation due to incorrect OS (detected $DTETCTED_OS)"
-    instwarn "MIL projects require Ubuntu 14.04 (trusty)"
+    instwarn "This project requires Ubuntu Xenial (16.04)"
     exit 1
 fi
 
