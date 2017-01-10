@@ -62,7 +62,7 @@ done
 
 # The paths to the aliases configuration files
 BASHRC_FILE=~/.bashrc
-ALIASES_FILE=$CATKIN_DIR/src/.sub_aliases
+ALIASES_FILE=$CATKIN_DIR/src/sub8/.sub_aliases
 
 #==================#
 # Pre-Flight Check #
