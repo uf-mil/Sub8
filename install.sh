@@ -62,7 +62,7 @@ done
 
 # The paths to the aliases configuration files
 BASHRC_FILE=~/.bashrc
-ALIASES_FILE=$CATKIN_DIR/src/sub8/.sub_aliases
+ALIASES_FILE=$CATKIN_DIR/src/Sub8/.sub_aliases
 
 #==================#
 # Pre-Flight Check #
@@ -210,10 +210,10 @@ catkin_make -C $CATKIN_DIR -B
 source ../devel/setup.bash
 
 # Clones the Sub8 directory unless it already exists
-if !(ls $CATKIN_DIR/src | grep --quiet "sub8"); then
+if !(ls $CATKIN_DIR/src | grep --quiet "Sub8"); then
     instlog "Downloading the Sub8 repository"
     cd $CATKIN_DIR/src
-    git clone https://github.com/uf-mil/sub8.git
+    git clone https://github.com/uf-mil/Sub8.git
     cd $CATKIN_DIR/src/Sub8
     git remote rename origin upstream
     instlog "Make sure you change your git origin to point to your own fork! (git remote add origin your_forks_url)"
@@ -268,6 +268,6 @@ cd $CATKIN_DIR/src
 git clone https://github.com/RustyBamboo/camera1394.git
 git clone https://github.com/txros/txros.git
 
-mv $CATKIN_DIR/src/sub8/gnc/sub8_trajectory_generator $CATKIN_DIR/src/sub8/gnc/.sub8_trajectory_generator
+mv $CATKIN_DIR/src/Sub8/gnc/sub8_trajectory_generator $CATKIN_DIR/src/Sub8/gnc/.sub8_trajectory_generator
 
 catkin_make -C $CATKIN_DIR -B
