@@ -1,81 +1,166 @@
 #!/bin/bash
-GOODCOLOR='\033[1;36m'
-WARNCOLOR='\033[1;31m'
-NOCOLOR='\033[0m'
-GOODPREFIX="${GOODCOLOR}INSTALLER:"
-WARNPREFIX="${WARNCOLOR}ERROR:"
 
-# Sane installation defaults for no argument cases
-CATKIN_DIR=~/sub_ws
-REQUIRED_OS="trusty"
+NOCOLOR='\033[0m'
+LOGCOLOR='\033[1;36m'
+PASSCOLOR='\033[1;32m'
+WARNCOLOR='\033[1;31m'
+
+LOGPREFIX="${LOGCOLOR}INSTALLER:"
+WARNPREFIX="${WARNCOLOR}ERROR:"
+PASSTEXT="${PASSCOLOR}PASS"
+FAILTEXT="${WARNCOLOR}FAIL"
 
 instlog() {
-    printf "$GOODPREFIX $@ $NOCOLOR\n"
+    printf "$LOGPREFIX $@ $NOCOLOR\n"
 }
 
 instwarn() {
     printf "$WARNPREFIX $@ $NOCOLOR\n"
 }
 
+
+instpass() {
+    printf "$PASSTEXT $NOCOLOR"
+}
+
+
+instfail() {
+    printf "$FAILTEXT $NOCOLOR"
+}
+
+check_host() {
+
+    # Attempts to ping a host to make sure it is reachable
+    HOST="$1"
+
+    HOST_PING=$(ping -c 2 $HOST 2>&1 | grep "% packet" | cut -d" " -f 6 | tr -d "%")
+    if ! [ -z "${HOST_PING}" ]; then
+
+        # Uses packet loss percentage to determine if the connection is strong
+        if [ $HOST_PING -lt 25 ]; then
+
+            # Will return true if ping was successful and packet loss was below 25%
+            return `true`
+        fi
+    fi
+    return `false`
+}
+
+REQUIRED_OS="xenial"
+
+# Confirmation of where to put CATKIN directory
+CATKIN_DIR=~/mil_ws
+while true; do
+    instlog "The CATKIN Directory is $CATKIN_DIR. Is this okay(y/n)? "
+    read yn
+    case $yn in
+        [Yy]* ) break;;
+        [Nn]* ) read -p "Enter a new directory: " CATKIN_DIR; break;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
+
+# The paths to the aliases configuration files
+BASHRC_FILE=~/.bashrc
+ALIASES_FILE=$CATKIN_DIR/src/Sub8/.sub_aliases
+
+#==================#
+# Pre-Flight Check #
+#==================#
+
+instlog "Starting the pre-flight system check to ensure installation was done properly"
+
+# The lsb-release package is critical to check the OS version
+# It may not be on bare-bones systems, so it is installed here if necessary
+sudo apt-get update -qq
+sudo apt-get install -qq lsb-release
+
+# Ensure that the correct OS is installed
 DTETCTED_OS="`lsb_release -sc`"
-if ([ $DTETCTED_OS != $REQUIRED_OS ]); then
-    instwarn "The Sub requires Ubuntu 14.04 (trusty)"
+if [ $DTETCTED_OS = $REQUIRED_OS ]; then
+    OS_CHECK=true
+    echo -n "[ " && instpass && echo -n "] "
+else
+    OS_CHECK=false
+    echo -n "[ " && instfail && echo -n "] "
+fi
+echo "OS distribution and version check"
+
+
+# Prevent the script from being run as root
+if [ $USER != "root" ]; then
+    ROOT_CHECK=true
+    echo -n "[ " && instpass && echo -n "] "
+else
+    ROOT_CHECK=false
+    echo -n "[ " && instfail && echo -n "] "
+fi
+echo "Running user check"
+
+# Check whether or not github.com is reachable
+# This also makes sure that the user is connected to the internet
+if (check_host "github.com"); then
+    NET_CHECK=true
+    echo -n "[ " && instpass && echo -n "] "
+else
+    NET_CHECK=false
+    echo -n "[ " && instfail && echo -n "] "
+fi
+echo "Internet connectivity check"
+
+if !($OS_CHECK); then
+
+    # The script will not allow the user to install on an unsupported OS
     instwarn "Terminating installation due to incorrect OS (detected $DTETCTED_OS)"
+    instwarn "This project requires Ubuntu Xenial (16.04)"
     exit 1
 fi
 
+if !($ROOT_CHECK); then
 
-#======================#
-# Script Configuration #
-#======================#
+    # The script will not allow the user to install as root
+    instwarn "Terminating installation due to forbidden user"
+    instwarn "The install script should not be run as root"
+    exit 1
+fi
 
-while [ "$#" -gt 0 ]; do
-  case $1 in
-    -h) printf "\nUsage: $0 \n
-    [-c] catkin_workspace (Recommend: ~/sub_ws)\n
-    example: ./install.sh -c ~/sub_ws
-    \n"; exit ;;
-    # TODO: Use this to check if catkin ws already set up
-    -c) CATKIN_DIR="$2"
-        shift 2;;
-    -?) instwarn "Option $1 is not implemented"; exit ;;
-  esac
-done
+if !($NET_CHECK); then
 
+    # The script will not allow the user to install without internet
+    instwarn "Terminating installation due to the lack of an internet connection"
+    instwarn "The install script needs to be able to connect to GitHub and other sites"
+    exit 1
+fi
 
-#==================================#
-# Repository and Dependancy Set Up #
-#==================================#
+#===================================================#
+# Repository and Set Up and Main Stack Installation #
+#===================================================#
 
 # Make sure script dependencies are installed on bare bones installations
 instlog "Installing install script dependencies"
+sudo apt-get install -qq wget curl aptitude fakeroot ssh git
+
+#Add software repositories for ROS
+sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+sudo apt-key adv --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-key 421C365BD9FF1F717815A3895523BAEEB01FA116
+
+# Add software repository for Git-LFS
+instlog "Adding the Git-LFS packagecloud repository to software sources"
+curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
+
+instlog "Installing Catkin and Rosdep"
 sudo apt-get update -qq
-sudo apt-get install -qq wget git
+sudo apt-get install -qq catkin python-rosdep
 
-# Add software repositories for ROS and Gazebo
-instlog "Adding ROS and Gazebo PPAs to software sources"
-sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu trusty main" > /etc/apt/sources.list.d/ros-latest.list'
-sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu trusty main" > /etc/apt/sources.list.d/gazebo-latest.list'
+instlog "Installing the full ROS Kinetic"
+sudo apt-get install -qq ros-kinetic-desktop-full 
 
-# Get the GPG signing keys for the above repositories
-wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
-sudo apt-key adv --keyserver hkp://pool.sks-keyservers.net --recv-key 0xB01FA116
-
-# Install ROS and other project dependencies
-instlog "Installing ROS and Gazebo"
-sudo apt-get update -qq
-if (env | grep --quiet "SUB=true"); then
-    sudo apt-get install -qq ros-indigo-desktop-full
-else
-    sudo apt-get install -qq ros-indigo-desktop
-fi
-sudo apt-get install -qq python-catkin-pkg python-rosdep gazebo7
-
-# Sources ROS configurations for bash on this user account
-source /opt/ros/indigo/setup.bash
-if !(cat ~/.bashrc | grep --quiet "source /opt/ros"); then
-    echo "" >> ~/.bashrc
-    echo "source /opt/ros/indigo/setup.bash" >> ~/.bashrc
+# Source ROS configurations for bash on this user account
+source /opt/ros/kinetic/setup.bash
+if !(cat $BASHRC_FILE | grep --quiet "source /opt/ros"); then
+    echo "" >> $BASHRC_FILE
+    echo "# Sets up the shell environment for ROS" >> $BASHRC_FILE
+    echo "source /opt/ros/kinetic/setup.bash" >> $BASHRC_FILE
 fi
 
 # Get information about ROS versions
@@ -85,55 +170,104 @@ if !([ -f /etc/ros/rosdep/sources.list.d/20-default.list ]); then
 fi
 rosdep update
 
+instlog "Installing Sub8 ROS dependencies"
+sudo apt-get install -qq binutils-dev
+sudo apt-get install -qq ros-kinetic-ompl
+sudo apt-get install -qq ros-kinetic-spacenav-node
 
-#=====================================#
-# Workspace and Sub Repository Set Up #
-#=====================================#
+# Get older version of Google protobuf for Gazebo
+if !( protoc --version | grep "libprotoc 2.6.1" ); then
+    instlog "Installing Google protobuf v2.6.1"
+    wget https://github.com/google/protobuf/releases/download/v2.6.1/protobuf-2.6.1.tar.gz
+    tar -xvzf protobuf-2.6.1.tar.gz
+    cd protobuf-2.6.1
+    ./configure
+    make
+    make check
+    sudo make install
+    cd ..
+    sudo rm -r protobuf-2.6.1
+    sudo rm -r protobuf-2.6.1.tar.gz
+else
+    instlog "Detected correct version of protoc"
+fi
 
 # Set up catkin workspace directory
 if !([ -f $CATKIN_DIR/src/CMakeLists.txt ]); then
     instlog "Generating catkin workspace at $CATKIN_DIR"
-    mkdir -p "$CATKIN_DIR/src"
-    cd "$CATKIN_DIR/src"
+    mkdir -p $CATKIN_DIR/src
+    cd $CATKIN_DIR/src
     catkin_init_workspace
-    catkin_make -C "$CATKIN_DIR"
 else
     instlog "Using existing catkin workspace at $CATKIN_DIR"
+    cd $CATKIN_DIR/src
 fi
 
-# If we're in the Semaphore-ci, we should run catkin_make in the actual build thread
-if (env | grep --quiet "SEMAPHORE=true"); then
-    mv ~/Sub8 "$CATKIN_DIR/src"
-fi
+CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:/opt/ros/kinetic
+git clone https://github.com/ros-drivers/driver_common
+catkin_make -C $CATKIN_DIR -B
 
-# Sources the workspace's configurations for bash on this user account
-source "$CATKIN_DIR/devel/setup.bash"
-if !(cat ~/.bashrc | grep --quiet "source $CATKIN_DIR/devel/setup.bash"); then
-    echo "source $CATKIN_DIR/devel/setup.bash" >> ~/.bashrc
-fi
+source ../devel/setup.bash
 
-# Check if the sub is set up; if it isn't, set it up
-if !(ls "$CATKIN_DIR/src" | grep --quiet "Sub8"); then
-    instlog "Looks like you don't have the sub set up, let's do that"
-    cd "$CATKIN_DIR/src"
-    git clone -q https://github.com/uf-mil/Sub8.git
-    cd Sub8
+# Clones the Sub8 directory unless it already exists
+if !(ls $CATKIN_DIR/src | grep --quiet "Sub8"); then
+    instlog "Downloading the Sub8 repository"
+    cd $CATKIN_DIR/src
+    git clone https://github.com/uf-mil/Sub8.git
+    cd $CATKIN_DIR/src/Sub8
     git remote rename origin upstream
-    instlog "Make sure you change your git to point to your own fork! (git remote add origin your_forks_url)"
+    instlog "Make sure you change your git origin to point to your own fork! (git remote add origin your_forks_url)"
 fi
 
-# Update the hosts file if necessary
-if (env | grep --quiet "SUB=true"); then
-    $CATKIN_DIR/src/Sub8/scripts/update-hosts.bash
+# Adds Sub8 aliases to $BASHRC_FILE unless already exists
+if !(cat $BASHRC_FILE | grep --quiet "source $ALIASES_FILE"); then
+    echo "" >> $BASHRC_FILE
+    echo "# Adds Sub8 aliases to shell environment" >> $BASHRC_FILE
+    echo "source $ALIASES_FILE" >> $BASHRC_FILE
 fi
 
-# Install external dependencies with another script
-instlog "Running the get_dependencies.sh script to update external dependencies"
+#================================#
+#    Dependency Installation     #
+#================================#
+instlog "Installing Sub8 dependencies"
+
+sudo apt-get install python-scipy
+sudo apt-get install tesseract-ocr
+sudo apt-get install libusb-1.0-0-dev
+
+# Tools
+sudo apt-get install -qq sshfs
+sudo apt-get install -qq git-lfs gitk
+git lfs install --skip-smudge
+sudo apt-get install -qq tmux
+
+# Libraries needed by txros
+sudo apt-get install -qq python-twisted socat
+
+# Package management
+sudo pip install -q -U setuptools
+
+# Service identity verification
+sudo pip install -q -U service_identity
+
+# Utilities
+sudo pip install -q -U argcomplete
+sudo pip install -q -U tqdm
+sudo pip install -q -U pyasn1
+sudo pip install -q -U characteristic
+sudo pip install -q -U progressbar
+
+# Machine Learning
+sudo pip install -q -U scikit-learn > /dev/null 2>&1
+
+# Visualization
+sudo pip install -q -U mayavi > /dev/null 2>&1
+
+instlog "Cloning common GIT repositories"
 cd $CATKIN_DIR/src
-$CATKIN_DIR/src/Sub8/scripts/get_dependencies.sh
+git clone https://github.com/RustyBamboo/camera1394.git
+git clone https://github.com/txros/txros.git
 
-# Attempt to build the sub from scratch on client machines
-if !(env | grep --quiet "SEMAPHORE=true"); then
-    instlog "Building the sub's software stack with catkin_make"
-    catkin_make -C "$CATKIN_DIR" -j8
-fi
+mv $CATKIN_DIR/src/Sub8/gnc/sub8_trajectory_generator $CATKIN_DIR/src/Sub8/gnc/.sub8_trajectory_generator
+
+catkin_make -C $CATKIN_DIR -B
