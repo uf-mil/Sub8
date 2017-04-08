@@ -129,17 +129,30 @@ class Device {
           dirs.push_back(uf_common::make_xyz<geometry_msgs::Vector3>(0, +x, -z));
           dirs.push_back(uf_common::make_xyz<geometry_msgs::Vector3>(0, -x, -z));
         }
+        // Keep track of which beams didn't return for logging
+        std::vector<size_t> invalid_beams;
+        invalid_beams.reserve(4);
         for (int i = 0; i < 4; i++) {
           uf_common::VelocityMeasurement m;
           m.direction = dirs[i];
           int32_t vel = gets32le(ensemble.data() + offset + 2 + 4 * i);
           m.velocity = -vel * .01e-3;
           if (vel == -3276801) {  // -3276801 indicates no data
-            ROS_ERROR("DVL didn't return bottom velocity for beam %i", i + 1);
+            invliad_beams.push_back(i + 1);
             m.velocity = nan("");
           }
           res->velocity_measurements.push_back(m);
         }
+
+        // Report a list of invalid beams
+        if (invalid_beams.size > 0){
+          std::string to_log = "DVL didn't return bottom velocity for beam(s) ";
+          for (const size_t beam : invalid_beams){
+            to_log += std::to_string(beam) + " ";
+          }
+          ROS_ERROR_THROTTLE(0.1, to_log);
+        }
+
       } else if (section_id == 0x0600) {  // Bottom Track
         for (int i = 0; i < 4; i++) {
           correlations[i] = *(ensemble.data() + offset + 32 + i);
@@ -147,7 +160,7 @@ class Device {
       } else if (section_id == 0x5804) {  // Bottom Track Range
         if (ensemble.size() - offset < 2 + 4 * 3) continue;
         if (gets32le(ensemble.data() + offset + 10) <= 0) {
-          ROS_ERROR("DVL didn't return height over bottom");
+          ROS_ERROR_THROTTLE(0.1, "DVL didn't return height over bottom");
           continue;
         }
         height_res = boost::make_optional(uf_common::Float64Stamped());
