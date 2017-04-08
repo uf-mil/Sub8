@@ -16,8 +16,8 @@ class BoundsServer(object):
 
 
     def got_request(self, req):
-        to_frame = "enu" if req.to_frame == '' else req.to_frame
-        
+        # to_frame = "enu" if req.to_frame == '' else req.to_frame
+        # map frame?        
         resp = BoundsResponse(enforce=False)
 
         bounds = [sub8_tools.numpy_to_point(i) for i in self.bounds]
