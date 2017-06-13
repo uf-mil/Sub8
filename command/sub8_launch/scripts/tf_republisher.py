@@ -22,7 +22,6 @@ def got_range(msg):
         te.fprint(e, title='TF REPUB')
 
 
-
 if __name__ == '__main__':
     rospy.init_node('tf_republish')
     rospy.sleep(1)
