@@ -5,6 +5,7 @@ import numpy as np
 from visualization_msgs.msg import Marker, MarkerArray
 from sub8_msgs.msg import Thrust
 from mil_ros_tools import numpy_to_point
+from geometry_msgs.msg import Point
 
 __author__ = 'Kevin Allen'
 
@@ -48,6 +49,22 @@ class ThrusterVisualizer(object):
             self.markers.markers[idx].points.append(pt)
             self.markers.markers[idx].id = idx
 
+        # Initialize a net thrust marker
+        m = Marker()
+        m.header.frame_id = '/base_link'
+        m.type = Marker.ARROW
+        m.ns = 'thrusters'
+        m.color.a = 0.8
+        m.scale.x = 0.01  # Shaft diameter
+        m.scale.y = 0.05  # Head diameter
+        m.action = Marker.DELETE
+        m.lifetime = rospy.Duration(0.1)
+        self.markers.markers.append(m)
+        self.net_thrust_id = len(self.markers.markers) - 1
+        self.markers.markers[self.net_thrust_id].points.append(Point(0, 0, 0))
+        self.markers.markers[self.net_thrust_id].points.append(Point(0, 0, 0))
+        self.markers.markers[self.net_thrust_id].id = self.net_thrust_id
+
         # Create publisher for marker and subscribe to thrust
         self.pub = rospy.Publisher('/thrusters/markers', MarkerArray, queue_size=5)
         self.thrust_sub = rospy.Subscriber('/thrusters/thrust', Thrust, self.thrust_cb, queue_size=5)
@@ -60,6 +77,7 @@ class ThrusterVisualizer(object):
         Also update the color of the arrow based on thrust, from green to yellow, with
         red being reserved for bounds.
         '''
+        net_thrust = np.array([0.0, 0.0, 0.0])  # Initialize net thrust counter
         for cmd in thrust.thruster_commands:
             if cmd.name not in self.layout:  # Don't draw marker if thruster is not in layout
                 continue
@@ -92,8 +110,21 @@ class ThrusterVisualizer(object):
             direction = direction / np.linalg.norm(direction)
             pt2 = np.array(layout['position']) + self.MAX_LENGTH * scale * direction
 
+            # Record the vector of thrust
+            net_thrust += (pt2 - layout['position'])
+
             self.markers.markers[idx].points[1] = numpy_to_point(pt2)
             self.markers.markers[idx].header.stamp = rospy.Time.now()
+
+        net_thrust /= len(thrust.thruster_commands)  # Get the average thrust
+        # Set proper values for the net thrust marker
+        self.markers.markers[self.net_thrust_id].action = Marker.ADD
+        self.markers.markers[self.net_thrust_id].points[1] = numpy_to_point(
+            net_thrust)
+        self.markers.markers[self.net_thrust_id].header.stamp = rospy.Time.now()
+        self.markers.markers[self.net_thrust_id].color.b = 1.0
+        self.markers.markers[self.net_thrust_id].color.g = 0.0
+        self.markers.markers[self.net_thrust_id].color.r = 0.0
 
         self.pub.publish(self.markers)
 
