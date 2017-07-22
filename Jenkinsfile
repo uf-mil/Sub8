@@ -25,12 +25,28 @@ dockerNode(image: 'uf-mil:subjugator') {
 	}
 	stage("Format") {
 		sh '''
+			unset FILES
+			source ~/.mil/milrc > /dev/null 2>&1
+			source $CATKIN_DIR/devel/setup.bash > /dev/null 2>&1
+			for FILE in $(find -regex ".*/[^.]*\\.\\(launch\\)$"); do
+				roslaunch-deps "$FILE"
+				if [ $? -ne 0 ]; then
+					FILES+=( "$FILE" )
+				fi
+			done
+			if (( ${#FILES[@]} > 0 )); then
+				echo "The following launch files have syntax errors or invalid dependencies ${FILES[@]}"
+				exit 1
+			fi
+		'''
+		sh '''
 			if [[ ! -z "$(python2.7 -m flake8 --ignore E731 --max-line-length=120 --exclude=__init__.py .)" ]]; then
 				echo "The preceding Python files are not formatted correctly"
 				exit 1
 			fi
 		'''
 		sh '''
+			unset FILES
 			source /opt/ros/kinetic/setup.bash > /dev/null 2>&1
 			wget -O ~/.clang-format https://raw.githubusercontent.com/uf-mil/installer/master/.clang-format
 			for FILE in $(find -regex ".*/.*\\.\\(c\\|cc\\|cpp\\|h\\|hpp\\)$"); do
@@ -39,7 +55,7 @@ dockerNode(image: 'uf-mil:subjugator') {
 				fi
 			done
 			if (( ${#FILES[@]} > 0 )); then
-				echo "The C++ following files are not formatted correctly: ${FILES[@]}"
+				echo "The following C++ files are not formatted correctly: ${FILES[@]}"
 				exit 1
 			fi
 		'''
