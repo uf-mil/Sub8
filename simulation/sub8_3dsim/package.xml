@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>sub8_3dsim</name>
+  <version>0.0.1</version>
+  <description>The sub8_3Dsim package</description>
+
+ 
+  <maintainer email="dvolya@ufl.edu">Daniel Volya</maintainer>
+
+
+  
+  <license>TODO</license>
+
+
+ 
+  <!--   <doc_depend>doxygen</doc_depend> -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>
