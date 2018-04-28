@@ -17,7 +17,10 @@
     drag: [234.552860675, 1233.796568101, 8534.84652202] # Drag coefficents X, Y, rotation, N / M/s or N*m / m/s
     </rosparam>
   </node>
-  
+
   <include file="$(find sub8_launch)/launch/tf.launch" />
   <node pkg="nodelet" type="nodelet" args="standalone odometry_utils/odometry_to_tf" name="odometry_to_tf"/>
+
+  <include file="$(find sub8_launch)/launch/subsystems/rise.launch"/>
+  
 </launch>

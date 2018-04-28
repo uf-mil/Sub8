@@ -7,6 +7,7 @@ from mil_tools import numpy_to_quaternion
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import WrenchStamped, Wrench, Pose, Point, Quaternion, Twist, Vector3
 from mil_ros_tools import rosmsg_to_numpy
+from tf import transformations
 
 def quaternion_multiply(quaternion1, quaternion0):
     w0, x0, y0, z0 = quaternion0
@@ -25,7 +26,7 @@ class Subsim():
         self.odom_publisher = rospy.Publisher("/odom", Odometry, queue_size=1)
 
         # Set initial state from constructor
-        self.pose = Pose(position=Point(0,0,0), orientation=Quaternion(0,0,0,1))
+        self.pose = Pose(position=Point(0,0,-5), orientation=Quaternion(0,0,0,1))
         self.twist = Twist(linear=Vector3(0,0,0), angular=Vector3(0,0,0))
         self.wrench = Wrench(force=Vector3(0,0,0), torque=Vector3(0,0,0))
 
@@ -47,7 +48,7 @@ class Subsim():
         self.inertia = np.float64([mass, mass, rotational_inertia])
         self.drag = np.float64(rospy.get_param('~drag'))
         self.update_period = rospy.get_param('~update_period', 0.1)
-        self.world_frame = rospy.get_param('~world_frame', 'map')
+        self.world_frame = rospy.get_param('~world_frame', '/map')
         self.body_frame = rospy.get_param('~body_frame', 'base_link')
 
     def actual_wrench_cb(self, msg):
@@ -62,24 +63,32 @@ class Subsim():
 
     def step(self, dt, wrench):
         '''
-        Simulate new pose and twist given a time delta and a force/torque applied to NaviGator
+        Simulate new pose and twist given a time delta and a force/torque applied to Subjugator
         '''
         position = rosmsg_to_numpy(self.pose.position)
         twist_linear = rosmsg_to_numpy(self.twist.linear)
-        position = position + twist_linear + 0.5 * rosmsg_to_numpy(wrench.force) * dt**2
+        position = position + twist_linear*dt + 0.5 * rosmsg_to_numpy(wrench.force) * dt**2
         self.pose.position = Point(*position)
 
         orientation = rosmsg_to_numpy(self.pose.orientation)
-
         twist_angular = rosmsg_to_numpy(self.twist.angular)
-        twist_angular_as_quat = np.hstack((np.array([0]), twist_angular))
+        wrench_torque = rosmsg_to_numpy(wrench.torque)
 
-        wrench_torque_as_quat = np.hstack((np.array([0]), rosmsg_to_numpy(wrench.torque)))
 
-        orientation = orientation + 0.5 * quaternion_multiply(orientation, wrench_torque_as_quat) 
+        new_twist_angular = twist_angular + wrench_torque * dt
+        if not np.allclose(new_twist_angular, np.array([0,0,0]), 1e-03):
+            
+            twist_angular_components = self.get_axis_and_mag(new_twist_angular)
+            rot_change = transformations.quaternion_about_axis(twist_angular_components[1], twist_angular_components[0])
+            rot_change = 0.5 * rot_change
+            orientation = orientation + rot_change * dt
 
-        orientation = orientation / np.linalg.norm(orientation)
-        self.pose.orientation = Quaternion(*orientation)
+            orientation = orientation / np.linalg.norm(orientation)
+            self.pose.orientation = Quaternion(*orientation)
+
+    def get_axis_and_mag(self, vec):
+        norm = np.linalg.norm(vec)
+        return (vec/norm, norm)
 
     def publish_odom(self):
         '''
