@@ -471,16 +471,42 @@ class SonarObjects(object):
         defer.returnValue(res)
 
     @util.cancellableInlineCallbacks
-    def start_search_in_cone(self, start_point, ray, angle_tol=30, distance_tol=10, speed=0.5, clear=False):
+    def start_search_in_cone(self,
+                             start_point,
+                             ray,
+                             angle_tol=30,
+                             distance_tol=10,
+                             speed=0.5,
+                             clear=False,
+                             c_func=None):
         if clear:
             print 'SONAR_OBJECTS: clearing pointcloud'
             self._clear_pcl(TriggerRequest())
 
+        yield self.sub.nh.sleep(1)
+
         for pose in self.pattern:
             yield pose.go(speed=speed, blind=True)
+            # sleep
+            yield self.sub.nh.sleep(0.1)
+
+            # Break out of loop if we find something satisifying function
+            res = yield self._objects_service(ObjectDBQueryRequest())
+            g_obj = self._get_objects_within_cone(res.objects, start_point,
+                                                  ray, angle_tol, distance_tol)
+            g_obj = self._sort_by_angle(g_obj, ray, start_point)
+            yield
+
+            if c_func is not None:
+                out = c_func(g_obj, ray)
+                print 'SONAR_OBJECTS: ' + str(out)
+                if out is not None or out is True:
+                    print 'SONAR_OBJECTS: found objects satisfing function'
+                    break
+
         res = yield self._objects_service(ObjectDBQueryRequest())
-        g_obj = self._get_objects_within_cone(
-            res.objects, start_point, ray, angle_tol, distance_tol)
+        g_obj = self._get_objects_within_cone(res.objects, start_point, ray,
+                                              angle_tol, distance_tol)
         g_obj = self._sort_by_angle(g_obj, ray, start_point)
         res.objects = g_obj
         defer.returnValue(res)
@@ -552,7 +578,8 @@ class SonarObjects(object):
                     defer.returnValue(res)
         defer.returnValue(None)
 
-    def _get_objects_within_cone(self, objects, start_point, ray, angle_tol,
+    @staticmethod
+    def _get_objects_within_cone(objects, start_point, ray, angle_tol,
                                  distance_tol):
         ray = ray / np.linalg.norm(ray)
         out = []
@@ -573,7 +600,8 @@ class SonarObjects(object):
             out.append(o)
         return out
 
-    def _sort_by_angle(self, objects, ray, start_point):
+    @staticmethod
+    def _sort_by_angle(objects, ray, start_point):
         """
         _sort_by_angle: returns object list sorted by angle
 
