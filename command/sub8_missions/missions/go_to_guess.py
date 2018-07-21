@@ -30,3 +30,4 @@ def run(sub_singleton):
         yield sub_singleton.move.look_at_without_pitching(
             np.array(positions[i][0:3])).go()
         yield sub_singleton.move.set_position(np.array(positions[i][0:3])).go()
+
