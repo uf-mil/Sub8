@@ -5,7 +5,8 @@ import rospy
 import rospkg
 import datetime
 import numpy as np
-
+import os
+import multiprocessing
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
@@ -30,11 +31,11 @@ class classifier(object):
         # Centering Threshold in pixels
         self.centering_thresh = rospy.get_param('~centering_thresh', 50)
         # Color thresholds to find orange, BGR
-        self.lower = rospy.get_param('~lower_color_threshold', [0, 30, 100])
-        self.upper = rospy.get_param('~upper_color_threshold', [100, 255, 255])
+        self.lower = rospy.get_param('~lower_color_threshold', [0, 0, 0])
+        self.upper = rospy.get_param('~upper_color_threshold', [255, 255, 255])
         # Camera topic we are pulling images from for processing
         self.camera_topic = rospy.get_param('~camera_topic',
-                                            '/camera/down/image_rect_color')
+                                            '/camera/front/left/image_rect_color')
         # Number of frames
         self.num_frames = rospy.get_param('~num_frames', 0)
         # Number of objects we detect
@@ -52,16 +53,18 @@ class classifier(object):
         self.midpoint = [self.im_width / 2, self.im_height / 2]
         # Whether or not we have centered on an object.
         self.centered = False
-        # Whether or not we are enabled
-        self.enabled = False
         '''
         Misc Utils, Image Subscriber, and Service Call.
         '''
         # CV bridge for converting from rosmessage to cv_image
         self.bridge = CvBridge()
 
+        # Inference graph and session for tensorflow
+        # self.inference_graph, self.sess = detector_utils.load_inference_graph()
+
         # Service Call = the on/off switch for this perception file.
         rospy.Service('~enable', SetBool, self.toggle_search)
+        self.p = multiprocessing.Process(target=self.run_tensorflow)
 
         # Subscribes to our image topic, allowing us to process the images
         self.sub1 = rospy.Subscriber(
@@ -94,24 +97,26 @@ class classifier(object):
         # self.path_roi_pub = rospy.Publisher(
         # 'path_roi', RegionOfInterest, queue_size=1)
 
+    def run_tensorflow(self):
+        self.inference_graph, self.sess = detector_utils.load_inference_graph()
+        # self.p.join()
+
     def toggle_search(self, srv):
         '''
         Callback for standard ~enable service. If true, start
         looking at frames for buoys.
         '''
         if srv.data:
-            # Inference graph and session for tensorflow
-            self.inference_graph, self.sess = detector_utils.load_inference_graph()
-
             rospy.loginfo("PATH LOCALIZER: enabled")
-            self.enabled = True
+            self.p.start()
 
         else:
             rospy.loginfo("PATH LOCALIZER: disabled")
-            self.sess.close()
-            self.enabled = False
+            self.p.terminate()
+            self.p = multiprocessing.Process(target=self.run_tensorflow)
 
         return SetBoolResponse(success=True)
+    
 
     def check_timestamp(self, msg):
         '''
@@ -126,16 +131,16 @@ class classifier(object):
             return False
 
     def img_callback(self, data):
-        if not self.enabled:
-            # print(self.enabled)
-            return None
-        if self.check_timestamp(data):
-            return None
+    	# rospy.loginfo(data)
+        # if self.check_timestamp(data):
+            # return None
+        print('well')
         try:
-            # print('Working')
+            print('Working')
             cv_image = self.bridge.imgmsg_to_cv2(data, 'bgr8')
         except CvBridgeError as e:
             print(e)
+
         cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
 
         # Run image through tensorflow graph
@@ -218,7 +223,7 @@ class classifier(object):
             try:
                 # print(output)
                 self.orange_image_pub.publish(
-                    self.bridge.cv2_to_imgmsg(output, 'bgr8'))
+                    self.bridge.cv2_to_imgmsg(np.array(output), 'bgr8'))
             except CvBridgeError as e:
                 print(e)
         return output
@@ -339,6 +344,11 @@ class classifier(object):
         else:
             direction = 'left'
         self.direction_pub.publish(data=direction)
+
+
+
+
+
 
 
 if __name__ == '__main__':
