@@ -5,7 +5,7 @@ from mil_misc_tools import text_effects
 import genpy
 
 # Import missions here
-import strip
+import pinger
 
 
 fprint = text_effects.FprintFactory(title="AUTO_MISSION").fprint
@@ -15,12 +15,16 @@ WAIT_SECONDS = 5.0
 @txros.util.cancellableInlineCallbacks
 def run_mission(sub, mission, timeout):
     # timeout in seconds
+    m = mission.run(sub).addErrback(lambda x: None)
     start_time = yield sub.nh.get_time()
-    mission = mission.run(sub)
     while sub.nh.get_time() - start_time < genpy.Duration(timeout):
+        # oof what a hack
+        if len(m.callbacks) == 0:
+            m.cancel()
+            defer.returnValue(False)
         yield sub.nh.sleep(0.5)
     fprint('MISSION TIMEOUT', msg_color='red')
-    mission.cancel()
+    m.cancel()
     defer.returnValue(True)
 
 
@@ -30,7 +34,11 @@ def do_mission(sub):
 
     # Chain 1 missions
     try:
-        yield run_mission(sub, strip, 330)
+        out = yield run_mission(sub, pinger, 400)
+        if not out:  # if we timeout
+            pass
+        else:
+            pass
     except Exception as e:
         fprint("Error in Chain 1 missions!", msg_color="red")
         print e
