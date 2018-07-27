@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys
 import rospy
-from sub8_msgs.srv import GuessRequest
+from sub8_msgs.srv import GuessRequest, GuessRequestResponse
 from geometry_msgs.msg import PoseStamped
 from interactive_markers.interactive_marker_server import *
 from visualization_msgs.msg import *
@@ -55,15 +55,15 @@ class Guess:
     def request_location(self, srv):
         req_item = srv.item
         if (req_item in self.items):
-            return self.markers_locations[req_item]
-
-
+            return GuessRequestResponse(location=self.markers_locations[req_item], found=True)
+        else:
+            return GuessRequestResponse(found=False)
+          
 def main(args):
     server = InteractiveMarkerServer("guess_markers")
     guess = Guess()
     for i in range(len(guess.items)):
         server.insert(guess.markers[i], guess.process_feedback)
-
     server.applyChanges()
     rospy.spin()
 
