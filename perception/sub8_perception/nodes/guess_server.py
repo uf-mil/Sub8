@@ -3,16 +3,16 @@ import sys
 import rospy
 from sub8_msgs.srv import GuessRequest, GuessRequestResponse
 from geometry_msgs.msg import PoseStamped
-from interactive_markers.interactive_marker_server import InteractiveMarker, InteractiveMarkerServer 
+from interactive_markers.interactive_marker_server import InteractiveMarker, InteractiveMarkerServer
 from visualization_msgs.msg import Marker, InteractiveMarkerControl
 
 
 class Guess:
-
     def __init__(self):
         rospy.sleep(1.0)
         self.items = ['pinger1', 'pinger2', 'dice']
-        self.guess_service = rospy.Service('guess_location', GuessRequest, self.request_location)
+        self.guess_service = rospy.Service('guess_location', GuessRequest,
+                                           self.request_location)
         self.markers_subscribers = []
         self.markers_locations = dict.fromkeys(self.items)
         self.markers_servers = []
@@ -31,9 +31,9 @@ class Guess:
         box_control.markers.append(box_marker)
         rotate_control = InteractiveMarkerControl()
         rotate_control.name = "move_x"
-        rotate_control.orientation.w = 1
+        rotate_control.orientation.w = 0.707
         rotate_control.orientation.x = 0
-        rotate_control.orientation.y = 1
+        rotate_control.orientation.y = 0.707
         rotate_control.orientation.z = 0
         rotate_control.interaction_mode = InteractiveMarkerControl.MOVE_PLANE
         spacer = 0
@@ -50,12 +50,14 @@ class Guess:
             spacer = spacer + 1
 
     def process_feedback(self, feedback):
-        self.markers_locations[feedback.marker_name] = PoseStamped(header=feedback.header, pose=feedback.pose)
+        self.markers_locations[feedback.marker_name] = PoseStamped(
+            header=feedback.header, pose=feedback.pose)
 
     def request_location(self, srv):
         req_item = srv.item
         if (req_item in self.items):
-            return GuessRequestResponse(location=self.markers_locations[req_item], found=True)
+            return GuessRequestResponse(
+                location=self.markers_locations[req_item], found=True)
         else:
             return GuessRequestResponse(found=False)
 
@@ -67,6 +69,7 @@ def main(args):
         server.insert(guess.markers[i], guess.process_feedback)
     server.applyChanges()
     rospy.spin()
+
 
 if __name__ == '__main__':
     rospy.init_node('guess')
