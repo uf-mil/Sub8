@@ -122,29 +122,25 @@ class FireTorpedos(object):
     @util.cancellableInlineCallbacks
     def fire(self, target):
         self.print_info("FIRING {}".format(target))
+        target_pose = self.targets[target].position
         yield self.sub.move.go(blind=self.BLIND, speed=0.1)  # Station hold
-        try:
-            self.tf_listener.waitForTransform('/base_link',
-                                              '/map',
-                                              self.ltime,
-                                              rospy.Duration(0.2))
-        except tf.Exception as e:
-            rospy.logwarn(
-                "Could not transform camera to map: {}".format(e))
-            # return False
+        transform = yield self.sub._tf_listener.get_transform('/base_link', '/map')
+        target_position = transform._q_mat.dot(
+                target_pose)
 
-        (t, rot_q) = self.tf_listener.lookupTransform(
-            '/base_link', '/map', self.ltime)
-        target_position = self.targets[target].position
-        print('Map Position: ', target_position)
         sub_pos = yield self.sub.tx_pose()
-        print('Current Sub Position: ', sub_pos)
+        # print('Current Sub Position: ', sub_pos)
 
+        # sub_pos = transform._q_mat.dot(
+                # (sub_pos[0]) - transform._p)
+        # target_position = target_position - sub_pos[0]
+        print('Map Position: ', target_position)
+        # yield self.sub.move.relative(np.array([0, target_pose[1] - sub_pos[0][1], 0])).go(blind=True, speed=.1)
         yield self.sub.move.depth(-target_position[2]).go(blind=self.BLIND, speed=.1)
-        yield self.sub.move.look_at_without_pitching(target_position).go(
+        yield self.sub.move.set_position(target_pose).go(
             blind=self.BLIND, speed=.1)
-        yield self.sub.move.set_position(target_position).backward(1).go(
-            blind=self.BLIND, speed=.1)
+        # yield self.sub.move.look_at_without_pitching(target_pose).go(
+        #     blind=self.BLIND, speed=.1)
         self.print_good(
             "{} locked. Firing torpedos. Hit confirmed, good job Commander.".
             format(target))
