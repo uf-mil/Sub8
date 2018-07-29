@@ -32,8 +32,10 @@ class FireTorpedos(object):
     Its goal is to search for a target on the torpedo board and fire at it.
     '''
     TIMEOUT_SECONDS = 30
-    Z_PATTERN_RADIUS = 0.01
+    Z_PATTERN_RADIUS = 0.5
     Y_PATTERN_RADIUS = 1.0
+    X_OFFSET = .2
+    Z_OFFSET = .2
     BACKUP_METERS = 3.0
     BLIND = True
 
@@ -107,6 +109,8 @@ class FireTorpedos(object):
 
     @util.cancellableInlineCallbacks
     def pattern(self):
+        self.print_info('Descending to Depth...')
+        yield self.sub.move.depth(1.5).go(blind=self.BLIND, speed=0.1)
         def err():
             self.print_info('Search pattern canceled')
 
@@ -138,7 +142,7 @@ class FireTorpedos(object):
             # blind=self.BLIND, speed=.1)
         print('Map Position: ', target_position)
         yield self.sub.move.relative(np.array([0, target_position[1], 0])).go(blind=True, speed=.1)
-        yield self.sub.move.relative(np.array([target_position[0], 0, target_position[2]])).go(
+        yield self.sub.move.relative(np.array([target_position[0] + self.X_OFFSET, 0, target_position[2] + self.Z_OFFSET])).go(
             blind=self.BLIND, speed=.1)
 
         self.print_good(

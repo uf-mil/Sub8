@@ -34,7 +34,7 @@ class classifier(object):
         self.upper = rospy.get_param('~upper_color_threshold', [255, 255, 255])
         # Camera topic we are pulling images from for processing
         self.camera_topic = rospy.get_param('~camera_topic',
-                                            '/camera/front/left/image_rect_color')
+                                            '/camera/down/image_rect_color')
         # Number of frames
         self.num_frames = rospy.get_param('~num_frames', 0)
         # Number of objects we detect
