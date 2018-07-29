@@ -1,6 +1,11 @@
 from txros import util
+import tf
+import rospy
 import numpy as np
 from mil_ros_tools import rosmsg_to_numpy
+import visualization_msgs.msg as visualization_msgs
+from visualization_msgs.msg import Marker, MarkerArray
+from geometry_msgs.msg import Point, Vector3
 from mil_misc_tools import FprintFactory
 
 MISSION = 'Torpedo Challenge'
@@ -27,8 +32,8 @@ class FireTorpedos(object):
     Its goal is to search for a target on the torpedo board and fire at it.
     '''
     TIMEOUT_SECONDS = 30
-    Z_PATTERN_RADIUS = 0.3
-    Y_PATTERN_RADIUS = 2.0
+    Z_PATTERN_RADIUS = 0.01
+    Y_PATTERN_RADIUS = 1.0
     BACKUP_METERS = 3.0
     BLIND = True
 
@@ -38,6 +43,8 @@ class FireTorpedos(object):
         self.print_bad = FprintFactory(title=MISSION, msg_color="red").fprint
         self.print_good = FprintFactory(
             title=MISSION, msg_color="green").fprint
+        self.tf_listener = tf.TransformListener()
+
         # B = bottom; T = Top; L = left; R = right; C = center; O = unblocked;
         # X = blocked;
         self.targets = {
@@ -48,6 +55,7 @@ class FireTorpedos(object):
         }
         self.pattern_done = False
         self.done = False
+        self.ltime = None
         self.generate_pattern()
 
     def generate_pattern(self):
@@ -58,10 +66,14 @@ class FireTorpedos(object):
 
     @util.cancellableInlineCallbacks
     def search(self):
+        global markers
+        markers = MarkerArray()
+        pub_markers = yield self.sub.nh.advertise('/torpedo/rays', MarkerArray)
         while True:
             info = 'CURRENT TARGETS: '
 
             target = 'BCO'
+            pub_markers.publish(markers)
             '''
             In the event we want to attempt other targets beyond bare minimum
             for target in self.targets. Eventually we will want to take the
@@ -72,8 +84,22 @@ class FireTorpedos(object):
             res = yield self.sub.vision_proxies.arm_torpedos.get_pose(
                 target='board')
             if res.found:
+                self.ltime = res.pose.header.stamp
                 self.targets[target].update_position(
                     rosmsg_to_numpy(res.pose.pose.position))
+                marker = Marker(
+                    ns='torp_board',
+                    action=visualization_msgs.Marker.ADD,
+                    type=Marker.ARROW,
+                    scale=Vector3(0.2, 0.5, 0),
+                    points=np.array([Point(0, 0, 0),
+                                     res.pose.pose.position]))
+                marker.id = 3
+                marker.header.frame_id = '/base_link'
+                marker.color.r = 1
+                marker.color.g = 0
+                marker.color.a = 1
+                markers.markers.append(marker)
             if self.targets[target].position is not None:
                 info += target + ' '
             yield self.sub.nh.sleep(0.5)  # Throttle service calls
@@ -97,7 +123,23 @@ class FireTorpedos(object):
     def fire(self, target):
         self.print_info("FIRING {}".format(target))
         yield self.sub.move.go(blind=self.BLIND, speed=0.1)  # Station hold
+        try:
+            self.tf_listener.waitForTransform('/base_link',
+                                              '/map',
+                                              self.ltime,
+                                              rospy.Duration(0.2))
+        except tf.Exception as e:
+            rospy.logwarn(
+                "Could not transform camera to map: {}".format(e))
+            # return False
+
+        (t, rot_q) = self.tf_listener.lookupTransform(
+            '/base_link', '/map', self.ltime)
         target_position = self.targets[target].position
+        print('Map Position: ', target_position)
+        sub_pos = yield self.sub.tx_pose()
+        print('Current Sub Position: ', sub_pos)
+
         yield self.sub.move.depth(-target_position[2]).go(blind=self.BLIND, speed=.1)
         yield self.sub.move.look_at_without_pitching(target_position).go(
             blind=self.BLIND, speed=.1)
@@ -106,8 +148,10 @@ class FireTorpedos(object):
         self.print_good(
             "{} locked. Firing torpedos. Hit confirmed, good job Commander.".
             format(target))
-        yield self.sub.set('torpedo1', True)
-        yield self.sub.set('torpedo2', True)
+        sub_pos = yield self.sub.tx_pose()
+        print('Current Sub Position: ', sub_pos)
+        yield self.sub.actuators.set('torpedo1', True)
+        yield self.sub.actuators.set('torpedo2', True)
         self.done = True
 
     def get_target(self):
@@ -162,5 +206,6 @@ class FireTorpedos(object):
 @util.cancellableInlineCallbacks
 def run(sub):
     # print('running')
+    rospy.init_node('arm_torpedos', anonymous=False)
     mission = FireTorpedos(sub)
     yield mission.run()
