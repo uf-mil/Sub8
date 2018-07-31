@@ -10,7 +10,6 @@ import multiprocessing
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
-from std_srvs.srv import SetBool, SetBoolResponse
 
 rospack = rospkg.RosPack()
 
@@ -22,6 +21,7 @@ from utils import detector_utils  # noqa
 
 
 class classifier(object):
+
     def __init__(self):
         '''
         Parameters
@@ -59,12 +59,7 @@ class classifier(object):
         # CV bridge for converting from rosmessage to cv_image
         self.bridge = CvBridge()
 
-        # Inference graph and session for tensorflow
-        # self.inference_graph, self.sess = detector_utils.load_inference_graph()
-
-        # Service Call = the on/off switch for this perception file.
-        rospy.Service('~enable', SetBool, self.toggle_search)
-        self.p = multiprocessing.Process(target=self.run_tensorflow)
+        self.inference_graph, self.sess = detector_utils.load_inference_graph()
 
         # Subscribes to our image topic, allowing us to process the images
         self.sub1 = rospy.Subscriber(
@@ -97,44 +92,23 @@ class classifier(object):
         # self.path_roi_pub = rospy.Publisher(
         # 'path_roi', RegionOfInterest, queue_size=1)
 
-    def run_tensorflow(self):
-        self.inference_graph, self.sess = detector_utils.load_inference_graph()
-        # self.p.join()
-
-    def toggle_search(self, srv):
-        '''
-        Callback for standard ~enable service. If true, start
-        looking at frames for buoys.
-        '''
-        if srv.data:
-            rospy.loginfo("PATH LOCALIZER: enabled")
-            self.p.start()
-
-        else:
-            rospy.loginfo("PATH LOCALIZER: disabled")
-            self.p.terminate()
-            self.p = multiprocessing.Process(target=self.run_tensorflow)
-
-        return SetBoolResponse(success=True)
-    
-
     def check_timestamp(self, msg):
         '''
         Check to see how old the image we are recieving is.
         This is a serious problem considering how long it takes to
         process a single image.
         '''
-        if abs(msg.header.stamp.secs -
-               int(rospy.get_time())) > self.time_thresh:
+        if abs(msg.header.stamp.secs - int(rospy.get_time())
+               ) > self.time_thresh:
             return True
         else:
             return False
 
     def img_callback(self, data):
-    	# rospy.loginfo(data)
-        # if self.check_timestamp(data):
-            # return None
-        print('well')
+
+        if self.check_timestamp(data):
+            return None
+
         try:
             print('Working')
             cv_image = self.bridge.imgmsg_to_cv2(data, 'bgr8')
@@ -183,9 +157,9 @@ class classifier(object):
         lower = np.array(self.lower, dtype="uint8")
         upper = np.array(self.upper, dtype="uint8")
         # Run through the mask function, returns all black image if no orange
-        check = self.mask_image(
-            cv_image[int(bbox[0][1]):int(bbox[1][1]),
-                     int(bbox[0][0]):int(bbox[1][0])], lower, upper)
+        check = self.mask_image(cv_image[int(bbox[0][1]):int(bbox[1][1]),
+                                         int(bbox[0][0]):int(bbox[1][0])],
+                                lower, upper)
         '''
         Find if we are centered on the region of interest, if not display its
         position relative to the center of the camera. Perform the check to see
@@ -344,11 +318,6 @@ class classifier(object):
         else:
             direction = 'left'
         self.direction_pub.publish(data=direction)
-
-
-
-
-
 
 
 if __name__ == '__main__':

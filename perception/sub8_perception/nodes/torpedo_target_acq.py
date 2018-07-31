@@ -15,6 +15,7 @@ from image_geometry import PinholeCameraModel
 from std_srvs.srv import SetBool, SetBoolResponse
 from geometry_msgs.msg import PoseStamped, Pose, Point
 from sub8_msgs.srv import VisionRequest, VisionRequestResponse
+
 from mil_ros_tools import Image_Subscriber, Image_Publisher
 from cv_bridge import CvBridge, CvBridgeError
 
@@ -30,13 +31,13 @@ class torp_vision:
     def __init__(self):
 
         # Pull constants from config file
-        self.lower = rospy.get_param('~lower_color_threshold', [0, 0, 60])
-        self.upper = rospy.get_param('~higher_color_threshold', [60, 60, 250])
+        self.lower = rospy.get_param('~lower_color_threshold', [0, 0, 80])
+        self.upper = rospy.get_param('~higher_color_threshold', [200, 200, 250])
         self.min_contour_area = rospy.get_param('~min_contour_area', .001)
         self.max_contour_area = rospy.get_param('~max_contour_area', 400)
         self.min_trans = rospy.get_param('~min_trans', .05)
         self.max_velocity = rospy.get_param('~max_velocity', 1)
-        self.timeout = rospy.Duration(rospy.get_param('~timeout_seconds'))
+        self.timeout = rospy.Duration(rospy.get_param('~timeout_seconds'), 250000)
         self.min_observations = rospy.get_param('~min_observations', 8)
         self.camera = rospy.get_param('~camera_topic',
                                       '/camera/front/left/image_rect_color')
@@ -149,12 +150,14 @@ class torp_vision:
                 self._pose_pairs.popleft()
             else:
                 i += 1
+        # print('Clearing')
 
     def size(self):
         return len(self._observations)
 
     def add_observation(self, obs, pose_pair, time):
         self.clear_old_observations()
+        # print('Adding...')
         if self.size() == 0 or np.linalg.norm(
                 self._pose_pairs[-1][0] - pose_pair[0]) > self.min_trans:
             self._observations.append(obs)
