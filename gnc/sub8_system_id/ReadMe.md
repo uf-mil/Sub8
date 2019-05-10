@@ -7,6 +7,11 @@ This program calculates the linear drag coeffiecnt in all six directions that th
 
 run
 
+	chmod +x estiamte_drag_coefficients.py
+to change the file into an executable
+
+run
+
 	roslaunch sub8_launch dynamics_simulator.launch
 
 In a new window, run
