@@ -4,7 +4,7 @@ import yaml
 from geometry_msgs.msg import WrenchStamped
 from nav_msgs.msg import Odometry
 # Initialized ros parameters and global values (feel free to tweak, values were empirically gained through trial/error)
-
+rospy.init_node('move_sub', anonymous=False)
 
 class Drag_C_Calc(object):
 
@@ -35,26 +35,27 @@ class Drag_C_Calc(object):
         self.drag = {}
 
     def find_bouyancy(self, choice):  # Initial function used upward force of buoyancy(used determining drag in Z axis)
-        rospy.init_node('move_sub', anonymous=False)
         down_force = -.5  # Applies initial downward force in z axis
-        pub = rospy.Publisher('/wrench', WrenchStamped, queue_size=30)
+        pub = rospy.Publisher('/wrench', WrenchStamped, queue_size=50)
+        rospy.sleep(.1)
         force_msg = WrenchStamped()
         force_msg.wrench.force.z = self.applied_force_down
         pub.publish(force_msg)  # publish wrench with force
         rospy.loginfo('Moving sub down...')
         rospy.sleep(self.time_of_apllied_force_down)  # node sleeps for some amount of time before continuing
         force_msg.wrench.force.z = 0  # Applies 0 force which stops downward force
+        rospy.loginfo('Stopping sub')
         pub.publish(force_msg)
         while not (rospy.is_shutdown()):
             rospy.Subscriber("/odom", Odometry, self.get_velocity, choice)
-            rospy.sleep(1)
+            rospy.sleep(2)
             if self.velocity > 0.0:
                 rospy.loginfo('Appling a force down to calculate the bouyancy')
                 while not (rospy.is_shutdown()):
                     force_msg.wrench.force.z = down_force
+                    rospy.sleep(.01)
                     pub.publish(force_msg)
                     down_force = down_force - .001
-                    rospy.sleep(.01)
                     if self.velocity < 0.0:
                         break
                 rospy.loginfo('bouyancy found!')
@@ -112,7 +113,6 @@ class Drag_C_Calc(object):
         '''
         
         pub = rospy.Publisher('/wrench', WrenchStamped, queue_size=20)  # Publisher for applying wrench (force/torque)
-        rospy.init_node('move_sub', anonymous=False)
         force_msg = WrenchStamped()
         # Char argument determines axis of applied force/torque
         if(choice == 'x'):
