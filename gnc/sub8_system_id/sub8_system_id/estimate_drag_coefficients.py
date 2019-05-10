@@ -35,9 +35,9 @@ class Drag_C_Calc(object):
         self.drag = {}
 
     def find_bouyancy(self, choice):  # Initial function used upward force of buoyancy(used determining drag in Z axis)
+        rospy.init_node('move_sub', anonymous=False)
         down_force = -.5  # Applies initial downward force in z axis
         pub = rospy.Publisher('/wrench', WrenchStamped, queue_size=30)
-        rospy.init_node('move_sub', anonymous=False)
         force_msg = WrenchStamped()
         force_msg.wrench.force.z = self.applied_force_down
         pub.publish(force_msg)  # publish wrench with force
@@ -110,7 +110,7 @@ class Drag_C_Calc(object):
         terminal (linear/rotationl) velocity in that direction. Once that
         max velocity is found, it is used in the calculate_drag() function.
         '''
-        global max_velocity, bouyancy, linear_drag_z
+        
         pub = rospy.Publisher('/wrench', WrenchStamped, queue_size=20)  # Publisher for applying wrench (force/torque)
         rospy.init_node('move_sub', anonymous=False)
         force_msg = WrenchStamped()
