@@ -37,6 +37,7 @@ class Drag_C_Calc(object):
     def find_bouyancy(self, choice):  # Initial function used upward force of buoyancy(used determining drag in Z axis)
         down_force = -.5  # Applies initial downward force in z axis
         pub = rospy.Publisher('/wrench', WrenchStamped, queue_size=50)
+        rospy.Subscriber("/odom", Odometry, self.get_velocity, choice)
         rospy.sleep(.1)
         force_msg = WrenchStamped()
         force_msg.wrench.force.z = self.applied_force_down
@@ -47,7 +48,6 @@ class Drag_C_Calc(object):
         rospy.loginfo('Stopping sub')
         pub.publish(force_msg)
         while not (rospy.is_shutdown()):
-            rospy.Subscriber("/odom", Odometry, self.get_velocity, choice)
             rospy.sleep(2)
             if self.velocity > 0.0:
                 rospy.loginfo('Appling a force down to calculate the bouyancy')
@@ -117,12 +117,15 @@ class Drag_C_Calc(object):
         # Char argument determines axis of applied force/torque
         if(choice == 'x'):
             force_msg.wrench.force.x = self.applied_linear_force
+            force_msg.wrench.force.z = -self.bouyancy
         elif(choice == 'y'):
             force_msg.wrench.force.y = self.applied_linear_force
+            force_msg.wrench.force.z = -self.bouyancy
         elif(choice == 'z'):
             force_msg.wrench.force.z = -self.applied_linear_force
         elif(choice == 'yw'):
             force_msg.wrench.torque.z = self.applied_torque
+            force_msg.wrench.force.z = -self.bouyancy
         elif(choice == 'rl'):
             force_msg.wrench.torque.x = self.applied_torque
         elif(choice == 'p'):
@@ -130,6 +133,7 @@ class Drag_C_Calc(object):
 
         pub.publish(force_msg)
         rospy.loginfo('Appling a force to find the drag in the {} direction'.format(choice))
+        rospy.Subscriber("/odom", Odometry, self.get_velocity, choice)
         while not (rospy.is_shutdown()):
             '''
             On each iteration of while loop: velocity is gained at two points in time (deltat = 2 seconds)
@@ -138,7 +142,6 @@ class Drag_C_Calc(object):
             the two velocities are assumed to be approximately equal. If two velocities taken at different
             time intervals are equal, the velocity is assumed to be maximized, reaching terminal velocity.
             '''
-            rospy.Subscriber("/odom", Odometry, self.get_velocity, choice)
             velocity1 = self.velocity
             rospy.sleep(2)
             velocity2 = self.velocity
