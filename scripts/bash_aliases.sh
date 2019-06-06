@@ -14,6 +14,16 @@ alias sub="cd \$CATKIN_DIR/src/SubjuGator"
 alias rsub="ros_connect -n ${HOSTNAMES[0]}"
 alias sshsub="ssh sub8@${HOSTNAMES[0]} -Y"
 
+# Actuators
+subvalveopen()
+{
+ rosservice call /set_valve "{actuator: $1, opened: true}"
+}
+subvalveclose()
+{
+ rosservice call /set_valve "{actuator: $1, opened: false}"
+}
+
 # Missions
 alias submove="runmission Move"
 
@@ -30,8 +40,3 @@ alias subtest="(cd \$CATKIN_DIR; rosrun mil_tools catkin_tests_directory.py src/
 
 # Set robot model param, for using rviz when playing bags
 alias submodel="roslaunch sub8_launch upload_urdf.launch"
-
-# Thrusters
-alias subthruster_shell="rosrun sub8_diagnostics thruster_shell.py -i"
-alias subthruster_spinner="rosrun sub8_diagnostics thruster_spinner.py"
-alias subthruster_monitor="/usr/bin/tmux -L diagnostics attach-session -t thruster_monitoring"
