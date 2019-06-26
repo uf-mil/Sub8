@@ -8,6 +8,7 @@
   <xacro:include filename="$(find mil_gazebo)/xacro/imu_magnetometer.xacro" />
   <xacro:include filename="$(find mil_gazebo)/xacro/depth.xacro" />
   <xacro:include filename="$(find mil_gazebo)/xacro/drag.xacro" />
+  <xacro:include filename="$(find mil_gazebo)/xacro/sonar.xacro" />
 
 
   <!-- Base link of sub -->
@@ -16,7 +17,9 @@
       <!-- Mass from official weigh-in at RobotSub 2018 -->
       <mass value="47.6" />
       <!-- Imported from old SDF model of Sub, unclear how these values were determined -->
-      <inertia ixx="1.18" ixy="-0.003" ixz="0.04" iyy="1.431" iyz="-0.034" izz="1.262" />
+      <!--
+      <inertia ixx="1.18" ixy="-0.003" ixz="0.04" iyy="1.431" iyz="-0.034" izz="1.262" /> -->
+      <inertia ixx="1.841" ixy="0.064" ixz="-0.026" iyy="1.51" iyz="-0.036" izz="2.11" />
     </inertial>
     <visual name="visual">
       <geometry>
@@ -31,6 +34,7 @@
   </link>
 
   <!-- Sensors -->
+
   <xacro:mil_fixed_link name="front_stereo" parent="base_link" xyz="0.2559 0 0.1707" rpy="0 0 0" />
   <xacro:mil_camera name="front_left_cam" parent="front_stereo" namespace="/camera/front/left" xyz="0 0.0445 0" rpy="0 0 0" />
   <xacro:mil_camera name="front_right_cam" parent="front_stereo" namespace="/camera/front/right" xyz="0 -0.0445 0" rpy="0 0 0" />
@@ -43,9 +47,36 @@
              should be xyz="0.0908 0 0.2459" rpy="0 0 0.785" -->
   <xacro:mil_dvl name="dvl" xyz="0.0908 0 -1.0" rpy="0 0 0.785" rate="6.5" />
   <xacro:mil_depth name="depth" xyz="-0.235 0 -0.170" rpy="0 0 0" rate="20" />
+  <!--
+  <xacro:blueview_p900 name="sonar" parent="base_link" namespace="sonar">
+    <origin xyz="0.333 0 0.381" rpy="3.142 0 0"/>
+  </xacro:blueview_p900>
+-->
+  <xacro:forward_looking_sonar
+    name="blueview"
+    suffix=""
+    parent_link="base_link"
+    topic="blueview"
+    mass="0.015"
+    update_rate="15"
+    samples="768"
+      fov="2.26893"
+      width="800"
+      height="430">
+      <!--
+        width="800"
+      height="430"> 
+    -->
+      <!--  1.54719755   2.26893 -->
+    <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001" />
+    <origin xyz="0.333 0 0.381" rpy="0 0 0"/>
+    <!-- <origin xyz="1.15 0 0.4" rpy="0 0.3 0"/> -->
+    <visual>
+    </visual>
+
+  </xacro:forward_looking_sonar>
 
   <!-- Other fixed frames -->
-  <xacro:mil_fixed_link name="blueview" parent="base_link" xyz="0.333 0 0.381" rpy="3.142 0 0" />
   <xacro:mil_fixed_link name="hydrophones" parent="base_link" xyz="-0.0908 0 -0.2459" rpy="0 0 1.571" />
 
   <!-- Dynamics simulation -->
@@ -59,6 +90,5 @@
     <xacro:mil_buoyancy use_param='True' />
   </gazebo>
 
-  <!-- TODO: add blueview simulator using ray sensor -->
 </robot>
 
