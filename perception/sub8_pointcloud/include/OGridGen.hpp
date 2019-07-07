@@ -30,6 +30,7 @@
 
 #include <Classification.hpp>
 
+#include <sub8_gazebo/simulated_sonar_ping.h>
 #include <mil_msgs/ObjectDBQuery.h>
 #include <mil_msgs/PerceptionObject.h>
 #include <mil_msgs/PerceptionObjectArray.h>
@@ -62,7 +63,9 @@ public:
   OGridGen();
   void publish_big_pointcloud(const ros::TimerEvent &);
 
-  void callback(const mil_blueview_driver::BlueViewPingPtr &ping_msg);
+  //void callback(const mil_blueview_driver::BlueViewPingPtr &ping_msg);
+
+  void callback(const sub8_gazebo::simulated_sonar_pingPtr &ping_msg);
   void dvl_callback(const mil_msgs::RangeStampedConstPtr &dvl);
 
   bool clear_ogrid_callback(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res);

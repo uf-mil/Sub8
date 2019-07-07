@@ -19,6 +19,10 @@
   <depend>xacro</depend>
   <build_export_depend>message_runtime</build_export_depend>
   <exec_depend>message_runtime</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <depend>tf</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2</depend>
 
   <license>MIT</license>
   <buildtool_depend>catkin</buildtool_depend>

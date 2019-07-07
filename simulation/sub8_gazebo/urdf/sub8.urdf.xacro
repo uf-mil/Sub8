@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro" name="sub8">
+  <xacro:arg name="namespace" default="sub8"/>
   <!-- Include macros -->
   <xacro:include filename="$(find mil_gazebo)/xacro/fixed_link.xacro" />
   <xacro:include filename="$(find mil_gazebo)/xacro/camera.xacro" />
@@ -43,9 +44,7 @@
                               ax="0.015707963" ay="0.015707963" az="0.015707963"
                               lx="0.08825985" ly="0.08825985" lz="0.08825985" />
 
-  <!-- TODO: switch back to correct transform once CAD mesh is fixed so beam doesnt collide with self
-             should be xyz="0.0908 0 0.2459" rpy="0 0 0.785" -->
-  <xacro:mil_dvl name="dvl" xyz="0.0908 0 -1.0" rpy="0 0 0.785" rate="6.5" />
+  <xacro:mil_dvl name="dvl" xyz="0.0908 0 -0.2459" rpy="0 0 0.785" gazebo_offset="0 0 -1" rate="6.5" />
   <xacro:mil_depth name="depth" xyz="-0.235 0 -0.170" rpy="0 0 0" rate="20" />
   <!--
   <xacro:blueview_p900 name="sonar" parent="base_link" namespace="sonar">
@@ -56,8 +55,8 @@
     name="blueview"
     suffix=""
     parent_link="base_link"
-    topic="blueview"
-    mass="0.015"
+    topic="sonar"
+    mass="0.001"
     update_rate="15"
     samples="768"
       fov="2.26893"

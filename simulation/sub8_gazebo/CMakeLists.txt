@@ -17,6 +17,11 @@ find_package(catkin
     tf
     tf2_ros
     tf2
+    geometry_msgs
+    gazebo_plugins
+    message_filters
+    pcl_conversions
+    pcl_ros
 )
 
 catkin_python_setup()
@@ -86,6 +91,12 @@ add_service_files(
   ResetGazebo.srv
   RunJob.srv
   SetTurbulence.srv
+)
+
+add_message_files(
+FILES
+simulated_sonar_ping.msg
+
 )
 
 generate_messages(DEPENDENCIES std_msgs)
