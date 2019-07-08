@@ -4,9 +4,9 @@ from txros import util
 from twisted.internet import defer
 
 
-class Surface(SubjuGator):
+class BallDropTest(SubjuGator):
     @util.cancellableInlineCallbacks
     def run(self, args):
-        self.send_feedback('Surfacing')
-        yield self.move.depth(0.2).go()
+        self.send_feedback('Dropping Ball')
+        yield self.actuators.drop_marker()
         defer.returnValue('Success!')

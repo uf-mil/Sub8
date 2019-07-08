@@ -11,13 +11,16 @@ import mil_ros_tools
 from sub8_msgs.srv import VisionRequest, VisionRequestRequest, VisionRequest2DRequest, VisionRequest2D
 from mil_msgs.srv import SetGeometry, SetGeometryRequest
 from mil_msgs.srv import ObjectDBQuery, ObjectDBQueryRequest
-from sub8_msgs.srv import SetValve, SetValveRequest
+#from sub8_msgs.srv import SetValve, SetValveRequest
+from sub8_actuator_board.srv import SetValve, SetValveRequest
 from std_srvs.srv import SetBool, SetBoolRequest, Trigger, TriggerRequest
 from nav_msgs.msg import Odometry
 from tf.transformations import quaternion_multiply, quaternion_from_euler
 from sensor_msgs.msg import PointCloud2
 import sensor_msgs.point_cloud2 as pc2
 from mil_missions_core import BaseMission
+
+from mil_passive_sonar.msg import ProcessedPing
 
 import numpy as np
 from twisted.internet import defer
@@ -186,43 +189,55 @@ class _ActuatorProxy(object):
     Wrapper for making service calls to pneumatic valve board.
 
     Example usage:
-    yield self.sub.gripper_open()
-    yield self.sub.set('torpedo1', True)
+    TODO
     '''
 
-    def __init__(self, nh, namespace='actuator_driver'):
-        self._actuator_service = nh.get_service_client(namespace + '/actuate',
+    def __init__(self, nh):
+        self._actuator_service = nh.get_service_client('/set_valve',
                                                        SetValve)
-        self._raw_service = nh.get_service_client(namespace + '/actuate_raw',
-                                                  SetValve)
+        self.nh = nh
 
-    def open(self, name):
-        return self.set(name, False)
+    def open(self, id):
+        return self.set(id, True)
 
-    def close(self, name):
-        return self.set(name, True)
+    def close(self, id):
+        return self.set(id, False)
 
-    def set(self, name, opened):
+    def set(self, id, opened):
         return self._actuator_service(
-            SetValveRequest(actuator=name, opened=opened))
+            SetValveRequest(actuator=id, opened=opened))
 
-    def set_raw(self, name, opened):
-        return self._raw_service(SetValveRequest(actuator=name, opened=opened))
+    @util.cancellableInlineCallbacks
+    def pulse(self, id, time=0.5):
+        self.open(id)
+        yield self.nh.sleep(time)
+        self.close(id)
+        return
 
+    @util.cancellableInlineCallbacks
     def gripper_open(self):
-        return self.set('gripper', True)
+        self.close(4)
+        yield self.pulse(5)
+        return
 
     def gripper_close(self):
-        return self.set('gripper', False)
+        self.open(4)
+        return
 
+    @util.cancellableInlineCallbacks
     def shoot_torpedo1(self):
-        return self.set('torpedo1', True)
+        yield self.pulse(0)
+        return
 
+    @util.cancellableInlineCallbacks
     def shoot_torpedo2(self):
-        return self.set('torpedo2', True)
+        yield self.pulse(1)
+        return
 
+    @util.cancellableInlineCallbacks
     def drop_marker(self):
-        return self.set('dropper', True)
+        yield self.pulse(2)
+        return
 
 
 class SubjuGator(BaseMission):
@@ -247,6 +262,7 @@ class SubjuGator(BaseMission):
         cls.vision_proxies = _VisionProxies(cls.nh, 'vision_proxies.yaml')
         cls.actuators = _ActuatorProxy(cls.nh)
         cls.test_mode = False
+        cls.pinger_sub = yield cls.nh.subscribe('/hydrophones/processed', ProcessedPing)
 
     @property
     def pose(self):

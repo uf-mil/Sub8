@@ -10,7 +10,7 @@
   <xacro:include filename="$(find mil_gazebo)/xacro/depth.xacro" />
   <xacro:include filename="$(find mil_gazebo)/xacro/drag.xacro" />
   <xacro:include filename="$(find mil_gazebo)/xacro/sonar.xacro" />
-
+  <xacro:include filename="$(find mil_gazebo)/xacro/passive_sonar.xacro" />
 
   <!-- Base link of sub -->
   <link name="base_link">
@@ -46,11 +46,7 @@
 
   <xacro:mil_dvl name="dvl" xyz="0.0908 0 -0.2459" rpy="0 0 0.785" gazebo_offset="0 0 -1" rate="6.5" />
   <xacro:mil_depth name="depth" xyz="-0.235 0 -0.170" rpy="0 0 0" rate="20" />
-  <!--
-  <xacro:blueview_p900 name="sonar" parent="base_link" namespace="sonar">
-    <origin xyz="0.333 0 0.381" rpy="3.142 0 0"/>
-  </xacro:blueview_p900>
--->
+
   <xacro:forward_looking_sonar
     name="blueview"
     suffix=""
@@ -75,8 +71,8 @@
 
   </xacro:forward_looking_sonar>
 
-  <!-- Other fixed frames -->
-  <xacro:mil_fixed_link name="hydrophones" parent="base_link" xyz="-0.0908 0 -0.2459" rpy="0 0 1.571" />
+  <xacro:mil_passive_sonar name="hydrophones" xyz="-0.0908 0 -0.2459" rpy="0 0 1.571"
+                           model="transdec_pinger" freq="37000" amplitude="1000"/>
 
   <!-- Dynamics simulation -->
   <xacro:mil_drag use_param='True' />
