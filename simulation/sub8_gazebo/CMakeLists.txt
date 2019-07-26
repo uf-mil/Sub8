@@ -93,11 +93,6 @@ add_service_files(
   SetTurbulence.srv
 )
 
-add_message_files(
-FILES
-simulated_sonar_ping.msg
-
-)
 
 generate_messages(DEPENDENCIES std_msgs)
 

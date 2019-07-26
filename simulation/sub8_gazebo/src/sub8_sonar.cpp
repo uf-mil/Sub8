@@ -28,7 +28,7 @@
 #include <gazebo/sensors/Sensor.hh>
 #include <gazebo/sensors/SensorTypes.hh>
 #include <sdf/sdf.hh>
-#include <sub8_gazebo/sub8_sonar.hh>
+#include <sub8_gazebo/sub8_sonar.hpp>
 
 #include <sensor_msgs/point_cloud2_iterator.h>
 #include <tf/tf.h>
