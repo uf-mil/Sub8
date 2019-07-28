@@ -3,7 +3,8 @@ import numpy as np
 import mil_ros_tools
 from mil_misc_tools import text_effects
 from mil_passive_sonar.msg import ProcessedPing
-from sub8_msgs.srv import GuessRequest, GuessRequestRequest
+# from sub8_msgs.srv import GuessRequest, GuessRequestRequest
+from std_srvs.srv import Trigger$
 from twisted.internet import defer
 import random
 import visualization_msgs.msg as visualization_msgs
@@ -35,22 +36,26 @@ class Pinger(SubjuGator):
         fprint('Getting Guess Locations')
 
         use_prediction = True
+
         try:
-            pinger_txros = yield self.nh.get_service_client('/guess_location',
-                                                            GuessRequest)
-            pinger_1_req = yield pinger_txros(GuessRequestRequest(item='pinger_surface'))
-            pinger_2_req = yield pinger_txros(GuessRequestRequest(item='pinger_shooter'))
-            if pinger_1_req.found is False or pinger_2_req.found is False:
-                use_prediction = False
-                fprint(
-                    'Forgot to add pinger to guess server?',
-                    msg_color='yellow')
-            else:
+            set_pois = yield self.nh.get_service_client(
+                '/poi_server/save_to_param', Trigger)
+            set_pois = set_pois(Trigger);
+            if set_pois ['success'] == True and\
+               rospy.has_param('/poi_server/initial_pois/pinger_surface') and\
+               rospy.has_param('/poi_server/initial_pois/pinger_shooter'):
+                pinger_1_req = rospy.get_param('/poi_server/initial_pois/pinger_surface'))
+                pinger_2_req = rospy.get_param('/poi_server/initial_pois/pinger_shooter'))
+
                 fprint('Found two pinger guesses', msg_color='green')
+                # check \/
                 pinger_guess = yield self.transform_to_baselink(
-                    self, pinger_1_req,
-                                                       pinger_2_req)
+                    self, pinger_1_req, pinger_2_req)
                 fprint(pinger_guess)
+            else:
+                use_prediction = False
+                fprint('Forgot to add pinger to guess server?',
+                        msg_color='yellow')
         except Exception as e:
             fprint(
                 'Failed to /guess_location. Procceding without guess',
@@ -191,9 +196,8 @@ class Pinger(SubjuGator):
         transform = yield sub._tf_listener.get_transform('/base_link', '/map')
         position = yield sub.pose.position
         pinger_guess = [
-            transform._q_mat.dot(
-                mil_ros_tools.rosmsg_to_numpy(x.location.pose.position) -
-                position) for x in (pinger_1_req, pinger_2_req)
+            transform._q_mat.dot(np.array(x) - position)\
+                for x in (pinger_1_req, pinger_2_req)
         ]
         for idx, guess in enumerate(pinger_guess):
             marker = Marker(
