@@ -1,10 +1,11 @@
 from txros import util
+import rospy
 import numpy as np
 import mil_ros_tools
 from mil_misc_tools import text_effects
 from mil_passive_sonar.msg import ProcessedPing
 # from sub8_msgs.srv import GuessRequest, GuessRequestRequest
-from std_srvs.srv import Trigger$
+from std_srvs.srv import Trigger
 from twisted.internet import defer
 import random
 import visualization_msgs.msg as visualization_msgs
@@ -38,16 +39,15 @@ class Pinger(SubjuGator):
         use_prediction = True
 
         try:
-            set_pois = yield self.nh.get_service_client(
+            save_pois = rospy.ServiceProxy(
                 '/poi_server/save_to_param', Trigger)
-            set_pois = set_pois(Trigger);
-            if set_pois ['success'] == True and\
-               rospy.has_param('/poi_server/initial_pois/pinger_surface') and\
-               rospy.has_param('/poi_server/initial_pois/pinger_shooter'):
-                pinger_1_req = rospy.get_param('/poi_server/initial_pois/pinger_surface'))
-                pinger_2_req = rospy.get_param('/poi_server/initial_pois/pinger_shooter'))
-
+            _ = save_pois();
+            if rospy.has_param('/poi_server/initial_pois/pinger_shooter') and\
+               rospy.has_param('/poi_server/initial_pois/pinger_surface'):
                 fprint('Found two pinger guesses', msg_color='green')
+                pinger_1_req = rospy.get_param('/poi_server/initial_pois/pinger_surface')
+                pinger_2_req = rospy.get_param('/poi_server/initial_pois/pinger_shooter')
+
                 # check \/
                 pinger_guess = yield self.transform_to_baselink(
                     self, pinger_1_req, pinger_2_req)
