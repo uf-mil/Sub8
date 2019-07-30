@@ -2,8 +2,16 @@
 <launch>
   <include file="$(find sub8_launch)/launch/upload_urdf.launch" />
   <node pkg="robot_state_publisher" name="robot_state_publisher" type="robot_state_publisher">
-    <param name="use_tf_static" value="false" />
+    <param name="use_tf_static" value="true" />
   </node>
-  <node pkg="sub8_launch" type="tf_republisher.py" name="tf_republisher" />
+
+  <node pkg="joint_state_publisher" name="joint_state_publisher" type="joint_state_publisher">
+  	<param name="robot_description" textfile="$(find sub8_gazebo)/urdf/sub8.urdf" />
+  	<param name="publish_default_velocities" value="True"/>
+  	<param name="publish_default_efforts" value="True" />
+  </node>
+
+  <node pkg="sub8_launch" type="tf_republisher.py" name="tf_replublisher" />
+
   <node pkg="nodelet" type="nodelet" args="standalone odometry_utils/odometry_to_tf" name="odometry_to_tf"/>
 </launch>

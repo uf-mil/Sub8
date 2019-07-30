@@ -7,12 +7,21 @@ project(sub8_gazebo)
 find_package(catkin
     REQUIRED COMPONENTS
     std_msgs
+    cv_bridge
     geometry_msgs
     rospy
     gazebo_ros
     roscpp
     message_generation
     xacro
+    tf
+    tf2_ros
+    tf2
+    geometry_msgs
+    gazebo_plugins
+    message_filters
+    pcl_conversions
+    pcl_ros
 )
 
 catkin_python_setup()
@@ -49,6 +58,7 @@ target_link_libraries(
         ${GAZEBO_LIBRARIES}
 )
 
+
 add_library(
     sub8_thrusters
         src/sub8_thrusters.cc
@@ -83,6 +93,7 @@ add_service_files(
   SetTurbulence.srv
 )
 
+
 generate_messages(DEPENDENCIES std_msgs)
 
 add_dependencies(sub8_thrusters
@@ -102,13 +113,26 @@ target_link_libraries(
         ${GAZEBO_LIBRARIES}
 )
 
+add_library(
+    sub8_sonar
+        src/sub8_sonar.cpp
+)
+set_target_properties(sub8_sonar PROPERTIES COMPILE_FLAGS "-std=c++11 -Wall")
+target_link_libraries(
+    sub8_sonar
+        ${catkin_LIBRARIES}
+        ${GAZEBO_LIBRARIES}
+        ${OpenCV_LIBRARIES}
+)
+
 
 catkin_package(
     INCLUDE_DIRS include
-    LIBRARIES sub8_buoyancy sub8_thrusters sub8_state_set sub8_liftdrag
+    LIBRARIES sub8_buoyancy sub8_thrusters sub8_state_set sub8_liftdrag sub8_sonar
     CATKIN_DEPENDS gazebo_ros roscpp rospy std_msgs message_runtime
     DEPENDS
 )
+
 
 # Generate Sub8's URDF
 xacro_add_files(

@@ -47,11 +47,11 @@ OGridGen::OGridGen()
   service_get_bounds_ = nh_.serviceClient<sub8_msgs::Bounds>("get_bounds");
 
   // Run the publisher
-  timer_ =
-      nh_.createTimer(ros::Duration(0.3), std::bind(&OGridGen::publish_big_pointcloud, this, std::placeholders::_1));
+  timer_ = 
+    nh_.createTimer(ros::Duration(0.3), std::bind(&OGridGen::publish_big_pointcloud, this, std::placeholders::_1));
   sub_to_imaging_sonar_ = nh_.subscribe("/blueview_driver/ranges", 1, &OGridGen::callback, this);
   sub_to_dvl_ = nh_.subscribe("/dvl/range", 1, &OGridGen::dvl_callback, this);
-
+ 
   mat_ogrid_ = cv::Mat::zeros(int(ogrid_size_ / resolution_), int(ogrid_size_ / resolution_), CV_8U);
   persistant_ogrid_ = cv::Mat(int(ogrid_size_) / resolution_, int(ogrid_size_ / resolution_), CV_32FC1);
   persistant_ogrid_ = 0.5;
@@ -116,9 +116,8 @@ void OGridGen::publish_big_pointcloud(const ros::TimerEvent &)
   }
 }
 
-/*
-  Subscribes to pingmsgs from blueview sonar and saves a plane of pings into a buffer based on sub pose
-*/
+
+  //Subscribes to pingmsgs from blueview sonar and saves a plane of pings into a buffer based on sub pose
 void OGridGen::callback(const mil_blueview_driver::BlueViewPingPtr &ping_msg)
 {
   try  // TODO: Switch to TF2
@@ -130,6 +129,7 @@ void OGridGen::callback(const mil_blueview_driver::BlueViewPingPtr &ping_msg)
     ROS_DEBUG_STREAM("Did not get TF for imaging sonar");
     return;
   }
+
   if (kill_listener_.isRaised())
     was_killed_ = true;
   else if (was_killed_)
@@ -141,8 +141,11 @@ void OGridGen::callback(const mil_blueview_driver::BlueViewPingPtr &ping_msg)
   pcl::PointCloud<pcl::PointXYZI>::Ptr point_cloud_plane(new pcl::PointCloud<pcl::PointXYZI>());
   for (size_t i = 0; i < ping_msg->ranges.size(); ++i)
   {
-    if (ping_msg->intensities.at(i) > min_intensity_)
+      //ROS_INFO("Bearing: %f \n", ping_msg->bearings.at(i));
+      
+    if (ping_msg->intensities.at(i) > 870.0 )//min_intensity_
     {  // TODO: Better thresholding
+      //ROS_INFO("Intensity: %u, Bearing: %f , Ranges: %f \n", ping_msg->intensities.at(i), ping_msg->bearings.at(i), ping_msg->ranges.at(i));
 
       // Get x and y of a ping. RIGHT TRIANGLES
       double x_d = ping_msg->ranges.at(i) * cos(ping_msg->bearings.at(i));
@@ -178,6 +181,9 @@ void OGridGen::callback(const mil_blueview_driver::BlueViewPingPtr &ping_msg)
     publish_ogrid();
   }
 }
+
+
+
 void OGridGen::populate_mat_ogrid()
 {
   classification_.zonify(persistant_ogrid_, resolution_, transform_, mat_origin_);
@@ -306,7 +312,7 @@ mil_msgs::PerceptionObjectArray OGridGen::cluster(pcl::PointCloud<pcl::PointXYZI
     marker.scale.x = maxPt.x - minPt.x;
     marker.scale.y = maxPt.y - minPt.y;
     marker.scale.z = maxPt.z - minPt.z;
-    marker.color.a = 1.0;
+    marker.color.a = 1.0f;
     marker.color.b = 1.0;
     markers.markers.push_back(marker);
   }

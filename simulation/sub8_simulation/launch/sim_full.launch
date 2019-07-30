@@ -10,8 +10,8 @@
     <node pkg="sub8_alarm" type="alarm_handler.py" name="sub8_alarm_handler" output="screen" />
 
     <!-- Vehicle control -->
-    <include file="$(find sub8_thruster_mapper)/launch/thruster_mapper.launch" />
-    <include file="$(find sub8_videoray_m5_thruster)/launch/thruster_driver.launch" />
+    <include file="$(find sub8_launch)/launch/subsystems/thruster_mapper.launch" />
+    <include file="$(find sub8_videoray_m5_thruster)/launch/thruster_driver.launch" /> 
     <include file="$(find sub8_launch)/launch/subsystems/rise.launch" />
 
     <group if="$(arg demo_mode)" >

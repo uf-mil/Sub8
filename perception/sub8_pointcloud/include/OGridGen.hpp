@@ -63,6 +63,7 @@ public:
   void publish_big_pointcloud(const ros::TimerEvent &);
 
   void callback(const mil_blueview_driver::BlueViewPingPtr &ping_msg);
+
   void dvl_callback(const mil_msgs::RangeStampedConstPtr &dvl);
 
   bool clear_ogrid_callback(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res);
